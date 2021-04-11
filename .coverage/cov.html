@@ -1,0 +1,2351 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>common: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/radekg/app-kit-orytest/common/common.go (74.4%)</option>
+				
+				<option value="file1">github.com/radekg/app-kit-orytest/hydra/hydra.go (68.1%)</option>
+				
+				<option value="file2">github.com/radekg/app-kit-orytest/keto/keto.go (70.1%)</option>
+				
+				<option value="file3">github.com/radekg/app-kit-orytest/kratos/kratos.go (55.1%)</option>
+				
+				<option value="file4">github.com/radekg/app-kit-orytest/mailslurper/mailslurper.go (52.4%)</option>
+				
+				<option value="file5">github.com/radekg/app-kit-orytest/postgres/postgres.go (78.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package common
+
+import (
+        "errors"
+        "fmt"
+        "net"
+        "os"
+        "strings"
+        "sync"
+        "testing"
+        "time"
+
+        "github.com/ory/dockertest"
+        dc "github.com/ory/dockertest/docker"
+)
+
+// GetEnvOrDefault returns the value of an environment variable
+// or fallback value, if environment variable is undefined or empty.
+func GetEnvOrDefault(key, fallback string) string <span class="cov7" title="20">{
+        value := os.Getenv(key)
+        if len(value) == 0 </span><span class="cov7" title="20">{
+                return fallback
+        }</span>
+        <span class="cov0" title="0">return value</span>
+}
+
+// StringP returns a pointer of a given input.
+func StringP(input string) *string <span class="cov9" title="44">{
+        return &amp;input
+}</span>
+
+// BoolP returns a pointer of a given input.
+func BoolP(input bool) *bool <span class="cov0" title="0">{
+        return &amp;input
+}</span>
+
+// Int64P returns a pointer of a given input.
+func Int64P(input int64) *int64 <span class="cov3" title="3">{
+        return &amp;input
+}</span>
+
+// -- Random port supplier.
+
+// RandomPortSupplier wraps the functionality for random port handling in tests.
+type RandomPortSupplier interface {
+        Cleanup()
+        Discover() error
+        DiscoveredHost() (string, bool)
+        DiscoveredPort() (string, bool)
+}
+
+type listenerPortSupplier struct {
+        closed         bool
+        discovered     bool
+        discoveredHost string
+        discoveredPort string
+        listener       net.Listener
+        lock           *sync.Mutex
+}
+
+// NewRandomPortSupplier creates an initialized instance of a random port supplier.
+func NewRandomPortSupplier() (RandomPortSupplier, error) <span class="cov6" title="12">{
+        listener, err := net.Listen("tcp", "127.0.0.1:0")
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov6" title="12">return &amp;listenerPortSupplier{
+                lock:     &amp;sync.Mutex{},
+                listener: listener,
+        }, nil</span>
+}
+
+func (l *listenerPortSupplier) Cleanup() <span class="cov7" title="24">{
+        l.lock.Lock()
+        defer l.lock.Unlock()
+        if !l.closed </span><span class="cov6" title="12">{
+                l.listener.Close()
+                l.closed = true
+        }</span>
+}
+
+func (l *listenerPortSupplier) Discover() error <span class="cov6" title="12">{
+        l.lock.Lock()
+        defer l.lock.Unlock()
+        if l.closed </span><span class="cov0" title="0">{
+                return errors.New("was-closed")
+        }</span>
+        <span class="cov6" title="12">host, port, err := net.SplitHostPort(l.listener.Addr().String())
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov6" title="12">l.discoveredHost = host
+        l.discoveredPort = port
+        l.discovered = true
+        return nil</span>
+}
+
+func (l *listenerPortSupplier) DiscoveredHost() (string, bool) <span class="cov0" title="0">{
+        l.lock.Lock()
+        defer l.lock.Unlock()
+        return l.discoveredHost, l.discovered
+}</span>
+
+func (l *listenerPortSupplier) DiscoveredPort() (string, bool) <span class="cov6" title="12">{
+        l.lock.Lock()
+        defer l.lock.Unlock()
+        return l.discoveredPort, l.discovered
+}</span>
+
+// WaitForContainerExit0 waits for the container to exist with code 0.
+func WaitForContainerExit0(t *testing.T, pool *dockertest.Pool, containerID string) error <span class="cov3" title="3">{
+        finalState := "not started"
+        finalStatus := ""
+
+        benchMigrateStart := time.Now()
+        chanSuccess := make(chan struct{}, 1)
+        chanError := make(chan error, 1)
+
+        go func() </span><span class="cov3" title="3">{
+                poolRetryErr := pool.Retry(func() error </span><span class="cov6" title="15">{
+                        containers, _ := pool.Client.ListContainers(dc.ListContainersOptions{All: true})
+                        for _, container := range containers </span><span class="cov10" title="70">{
+                                if container.ID == containerID </span><span class="cov6" title="15">{
+                                        time.Sleep(time.Millisecond * 50)
+                                        if container.State == "running" </span><span class="cov5" title="10">{
+                                                return errors.New("still running")
+                                        }</span>
+                                        <span class="cov4" title="5">if container.State == "restarting" </span><span class="cov2" title="2">{
+                                                t.Logf("container %s is restarting with status '%s'...", containerID, container.Status)
+                                                time.Sleep(time.Second)
+                                                continue</span>
+                                        }
+                                        <span class="cov3" title="3">finalState = container.State
+                                        finalStatus = container.Status
+                                        return nil</span>
+                                }
+                        }
+                        <span class="cov2" title="2">return errors.New("no container")</span>
+                })
+                <span class="cov3" title="3">if poolRetryErr == nil </span><span class="cov3" title="3">{
+                        close(chanSuccess)
+                        return
+                }</span>
+                <span class="cov0" title="0">chanError &lt;- poolRetryErr</span>
+        }()
+
+        <span class="cov3" title="3">select </span>{
+        case &lt;-chanSuccess:<span class="cov3" title="3">
+                t.Logf("container %s finished successfully after: %s", containerID, time.Now().Sub(benchMigrateStart).String())</span>
+        case receivedError := &lt;-chanError:<span class="cov0" title="0">
+                return receivedError</span>
+        case &lt;-time.After(time.Second * 10):<span class="cov0" title="0">
+                return fmt.Errorf("container %s complete within timeout", containerID)</span>
+        }
+
+        <span class="cov3" title="3">if finalState != "exited" </span><span class="cov0" title="0">{
+                return fmt.Errorf("expected container %s to be in state exited but received: '%s'", containerID, finalState)
+        }</span>
+        // it was exited, ...
+        <span class="cov3" title="3">if !strings.HasPrefix(strings.ToLower(finalStatus), "exited (0)") </span><span class="cov0" title="0">{
+                return fmt.Errorf("expected container %s to exit with status 0, received full exit message: '%s'", containerID, finalStatus)
+        }</span>
+
+        <span class="cov3" title="3">return nil</span>
+}
+
+// CompareStringSlices cpmpares if two string slices have the same length and same values.
+func CompareStringSlices(t *testing.T, this, that []string) <span class="cov0" title="0">{
+        if len(this) != len(that) </span><span class="cov0" title="0">{
+                t.Fatalf("expected did not match received: '%v' vs '%v'", this, that)
+        }</span>
+        <span class="cov0" title="0">for idx, exp := range this </span><span class="cov0" title="0">{
+                if exp != that[idx] </span><span class="cov0" title="0">{
+                        t.Fatalf("expected did not match received at index %d: '%v' vs '%v'", idx, exp, that[idx])
+                }</span>
+        }
+}
+
+// StringSlicesEqual compares two slices without failing the test.
+func StringSlicesEqual(t *testing.T, this, that []string) bool <span class="cov1" title="1">{
+        if len(this) != len(that) </span><span class="cov0" title="0">{
+                return false
+        }</span>
+        <span class="cov1" title="1">for idx, exp := range this </span><span class="cov1" title="1">{
+                if exp != that[idx] </span><span class="cov0" title="0">{
+                        return false
+                }</span>
+        }
+        <span class="cov1" title="1">return true</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package hydra
+
+import (
+        "fmt"
+        "io/ioutil"
+        "net/http"
+        "os"
+        "testing"
+        "time"
+
+        "github.com/ory/dockertest"
+        dc "github.com/ory/dockertest/docker"
+
+        "gopkg.in/yaml.v2"
+
+        "github.com/radekg/app-kit-orytest/common"
+        "github.com/radekg/app-kit-orytest/postgres"
+)
+
+const (
+        // DefaultHydraImageName specifies the Hydra docker image name to use in tests.
+        DefaultHydraImageName = "oryd/hydra"
+        // DefaultHydraEnvVarImageName is the environment variable name for default Hydra docker image name.
+        DefaultHydraEnvVarImageName = "TEST_ORY_HYDRA_IMAGE_NAME"
+        // DefaultHydraImageVersion specifies the Hydra docker image version to use in tests.
+        DefaultHydraImageVersion = "v1.10.1"
+        // DefaultHydraEnvVarImageVersion is the environment variable name for default Hydra docker image version.
+        DefaultHydraEnvVarImageVersion = "TEST_ORY_HYDRA_IMAGE_VERSION"
+)
+
+// TestEnvContext represents a test hydra environment context.
+type TestEnvContext interface {
+        Pool() *dockertest.Pool
+        PublicPort() string
+        AdminPort() string
+        Cleanup()
+}
+
+// SetupTestHydra sets up hydra environment for tests.
+func SetupTestHydra(t *testing.T, postgresCtx postgres.TestEnvContext) TestEnvContext <span class="cov1" title="1">{
+
+        // after every successful step, store a cleanup function here:
+        closables := []func(){
+                postgresCtx.Cleanup,
+        }
+
+        // used in case of a failure during setup:
+        closeClosables := func(closables []func()) </span><span class="cov0" title="0">{
+                for _, closable := range closables </span><span class="cov0" title="0">{
+                        defer closable()
+                }</span>
+        }
+
+        // close all reasources in reverse order:
+        <span class="cov1" title="1">prependClosable := func(closable func(), closables []func()) []func() </span><span class="cov7" title="5">{
+                return append([]func(){closable}, closables...)
+        }</span>
+
+        // create a temp file for the configuration:
+        <span class="cov1" title="1">hydraConfig, tempFileErr := ioutil.TempFile("", "hydra-config")
+        if tempFileErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected temp Hydra configuration file to be created but received an error: '%v'", tempFileErr)
+        }</span>
+
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: removing hydra config")
+                os.Remove(hydraConfig.Name())
+        }</span>, closables)
+
+        // we need two random ports:
+        <span class="cov1" title="1">publicListener, err := common.NewRandomPortSupplier()
+        if err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed creating public random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing public random port listener, if not closed yet")
+                publicListener.Cleanup()
+        }</span>, closables)
+        <span class="cov1" title="1">adminListener, err := common.NewRandomPortSupplier()
+        if err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed creating admin random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing admin random port listener, if not closed yet")
+                adminListener.Cleanup()
+        }</span>, closables)
+
+        <span class="cov1" title="1">if err := publicListener.Discover(); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed extracting host and port from public random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">if err := adminListener.Discover(); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed extracting host and port from admin random port listener: '%v'", err)
+        }</span>
+
+        <span class="cov1" title="1">fetchedHydraRandomPublicPort, _ := publicListener.DiscoveredPort()
+        fetchedHydraRandomAdminPort, _ := adminListener.DiscoveredPort()
+
+        // write test configuration to the temp file:
+        // hydra config requires the port from the public listener:
+
+        hydraSerializedConfigBytes, yamlErr := yaml.Marshal(hydraTestConfigFunc(t, fetchedHydraRandomPublicPort))
+        if yamlErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed serializing Hydra config to YAML: '%v'", err)
+        }</span>
+
+        <span class="cov1" title="1">if writeErr := ioutil.WriteFile(hydraConfig.Name(), hydraSerializedConfigBytes, 0777); writeErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected temp Hydra configuration file to be written but received an error: '%v'", writeErr)
+        }</span>
+
+        <span class="cov1" title="1">t.Log("Hydra config written...", hydraConfig.Name())
+
+        // create new pool using the default Docker endpoint:
+        pool, poolErr := dockertest.NewPool("")
+        if poolErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected docker pool to come up but received: '%v'", poolErr)
+        }</span>
+
+        <span class="cov1" title="1">migrateOptions := &amp;dockertest.RunOptions{
+                Repository: common.GetEnvOrDefault(DefaultHydraEnvVarImageName, DefaultHydraImageName),
+                Tag:        common.GetEnvOrDefault(DefaultHydraEnvVarImageVersion, DefaultHydraImageVersion),
+                Mounts: []string{
+                        fmt.Sprintf("%s:/etc/config/hydra/hydra.yml", hydraConfig.Name()),
+                },
+                Cmd: []string{"migrate", "-c", "/etc/config/hydra/hydra.yml", "sql", "-e", "--yes"},
+                Env: []string{
+                        "LOG_LEVEL=trace",
+                        fmt.Sprintf("DSN=postgres://%s:%s@%s:%s/%s?sslmode=disable&amp;max_conns=20&amp;max_idle_conns=4",
+                                postgresCtx.PostgresUser(),
+                                postgresCtx.PostgresPass(),
+                                postgresCtx.ContainerIP(),
+                                postgresCtx.ContainerPrivatePort(),
+                                postgresCtx.PostgresDatabase()),
+                },
+        }
+        hydraMigrate, hydraErr := pool.RunWithOptions(migrateOptions, func(config *dc.HostConfig) </span><span class="cov1" title="1">{
+                // Hydra migrate does not automatically retry failed migrations
+                config.RestartPolicy.Name = "on-failure"
+        }</span>)
+        <span class="cov1" title="1">if hydraErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected hydra migrate to start but received: '%v'", hydraErr)
+        }</span>
+
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing hydra migrate")
+                hydraMigrate.Close()
+                pool.Purge(hydraMigrate)
+        }</span>, closables)
+
+        <span class="cov1" title="1">if err := common.WaitForContainerExit0(t, pool, hydraMigrate.Container.ID); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("error while waiting for container to finish with exist status 0: '%v'", err)
+        }</span>
+
+        // create test hydra run options:
+        <span class="cov1" title="1">options := &amp;dockertest.RunOptions{
+                Repository: common.GetEnvOrDefault(DefaultHydraEnvVarImageName, DefaultHydraImageName),
+                Tag:        common.GetEnvOrDefault(DefaultHydraEnvVarImageVersion, DefaultHydraImageVersion),
+                Mounts: []string{
+                        fmt.Sprintf("%s:/etc/config/hydra/hydra.yml", hydraConfig.Name()),
+                },
+                Cmd: []string{"serve", "-c", "/etc/config/hydra/hydra.yml", "all", "--dangerous-force-http"},
+                ExposedPorts: []string{
+                        fmt.Sprintf("%s/tcp", fetchedHydraRandomPublicPort),
+                        fmt.Sprintf("%s/tcp", fetchedHydraRandomAdminPort)},
+                PortBindings: map[dc.Port][]dc.PortBinding{
+                        dc.Port(fmt.Sprintf("%s/tcp", fetchedHydraRandomPublicPort)): {{HostIP: "0.0.0.0", HostPort: fetchedHydraRandomPublicPort}},
+                        dc.Port(fmt.Sprintf("%s/tcp", fetchedHydraRandomAdminPort)):  {{HostIP: "0.0.0.0", HostPort: fetchedHydraRandomAdminPort}},
+                },
+                Env: []string{
+                        fmt.Sprintf("SERVE_PUBLIC_PORT=%s", fetchedHydraRandomPublicPort),
+                        "SERVE_PUBLIC_HOST=0.0.0.0",
+                        fmt.Sprintf("SERVE_ADMIN_PORT=%s", fetchedHydraRandomAdminPort),
+                        "SERVE_ADMIN_HOST=0.0.0.0",
+                        "LOG_LEVEL=trace",
+                        fmt.Sprintf("DSN=postgres://%s:%s@%s:%s/%s?sslmode=disable&amp;max_conns=20&amp;max_idle_conns=4",
+                                postgresCtx.PostgresUser(),
+                                postgresCtx.PostgresPass(),
+                                postgresCtx.ContainerIP(),
+                                postgresCtx.ContainerPrivatePort(),
+                                postgresCtx.PostgresDatabase()),
+                },
+        }
+
+        // make sure the random ports are free before we request the container to start:
+        adminListener.Cleanup()
+        publicListener.Cleanup()
+
+        // start the container:
+        hydra, hydraErr := pool.RunWithOptions(options, func(config *dc.HostConfig) </span>{<span class="cov1" title="1">}</span>)
+        <span class="cov1" title="1">if hydraErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected hydra to start but received: '%v'", hydraErr)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing hydra")
+                hydra.Close()
+                pool.Purge(hydra)
+        }</span>, closables)
+
+        <span class="cov1" title="1">benchStart := time.Now()
+
+        chanHydraRESTAPISuccess := make(chan struct{}, 1)
+        chanHydraRESTAPIError := make(chan error, 1)
+
+        hydraAdminPort := hydra.GetPort(fmt.Sprintf("%s/tcp", fetchedHydraRandomAdminPort))
+        hydraPublicPort := hydra.GetPort(fmt.Sprintf("%s/tcp", fetchedHydraRandomPublicPort))
+
+        t.Logf("Hydra started with container ID '%s', waiting for the REST API to start replying...", hydra.Container.ID)
+
+        go func() </span><span class="cov1" title="1">{
+                poolRetryErr := pool.Retry(func() error </span><span class="cov10" title="8">{
+                        request, requestErr := http.NewRequest(http.MethodGet, fmt.Sprintf("http://127.0.0.1:%s/health/ready", hydraAdminPort), nil)
+                        if requestErr != nil </span><span class="cov0" title="0">{
+                                t.Logf("expected /clients request to be constructed but received: '%v'", requestErr)
+                                return requestErr
+                        }</span>
+                        <span class="cov10" title="8">httpClient := &amp;http.Client{}
+                        response, responseErr := httpClient.Do(request)
+                        if responseErr != nil </span><span class="cov9" title="7">{
+                                t.Logf("expected /health/ready to reply but received: '%v'", responseErr)
+                                return responseErr
+                        }</span>
+                        <span class="cov1" title="1">responseBytes, responseReadErr := ioutil.ReadAll(response.Body)
+                        if responseErr != nil </span><span class="cov0" title="0">{
+                                t.Logf("failed reading response body: '%v'", responseReadErr)
+                                return responseErr
+                        }</span>
+                        <span class="cov1" title="1">defer response.Body.Close()
+                        t.Log("hydra /health/ready replied with status: ", response.StatusCode, string(responseBytes))
+                        if response.StatusCode == http.StatusOK </span><span class="cov1" title="1">{
+                                t.Logf("hydra /health/ready replied with status OK, body '%s'", string(responseBytes))
+                                return nil
+                        }</span>
+                        <span class="cov0" title="0">t.Logf("hydra /health/ready replied with status other than OK: '%d', body: '%s'", response.StatusCode, string(responseBytes))
+                        return fmt.Errorf("hydra rest status code other than OK: %d", response.StatusCode)</span>
+                })
+                <span class="cov1" title="1">if poolRetryErr == nil </span><span class="cov1" title="1">{
+                        close(chanHydraRESTAPISuccess)
+                        return
+                }</span>
+                <span class="cov0" title="0">chanHydraRESTAPIError &lt;- poolRetryErr</span>
+        }()
+
+        <span class="cov1" title="1">select </span>{
+        case &lt;-chanHydraRESTAPISuccess:<span class="cov1" title="1">
+                t.Logf("hydra REST API replied after: %s", time.Now().Sub(benchStart).String())</span>
+        case receivedError := &lt;-chanHydraRESTAPIError:<span class="cov0" title="0">
+                closeClosables(closables)
+                t.Fatalf("hydra REST API wait finished with error: '%v'", receivedError)</span>
+        case &lt;-time.After(time.Second * 30):<span class="cov0" title="0">
+                closeClosables(closables)
+                t.Fatalf("hydra REST API did not start communicating within timeout")</span>
+        }
+
+        // return the context:
+        <span class="cov1" title="1">return &amp;testHydraContext{
+                AdminPortValue: hydraAdminPort,
+                CleanupFuncValue: func() </span><span class="cov1" title="1">{
+                        for _, closable := range closables </span><span class="cov8" title="6">{
+                                closable()
+                        }</span>
+                },
+                PoolValue:       pool,
+                PublicPortValue: hydraPublicPort,
+        }
+
+}
+
+// -- default test context implementation:
+
+type testHydraContext struct {
+        AdminPortValue   string
+        CleanupFuncValue func()
+        PoolValue        *dockertest.Pool
+        PublicPortValue  string
+}
+
+func (ctx *testHydraContext) AdminPort() string <span class="cov1" title="1">{
+        return ctx.AdminPortValue
+}</span>
+
+func (ctx *testHydraContext) Cleanup() <span class="cov1" title="1">{
+        ctx.CleanupFuncValue()
+}</span>
+
+func (ctx *testHydraContext) Pool() *dockertest.Pool <span class="cov0" title="0">{
+        return ctx.PoolValue
+}</span>
+
+func (ctx *testHydraContext) PublicPort() string <span class="cov1" title="1">{
+        return ctx.PublicPortValue
+}</span>
+
+// -- Hydra models:
+
+// CreateClientArguments defines arguments for creating new Hydra OIDC client.
+type CreateClientArguments struct {
+        AllowedCorsOrigins                []string               `json:"allowed_cors_origins,omitempty"`
+        Audience                          []string               `json:"audience,omitempty"`
+        BackchannelLogoutSessionRequired  *bool                  `json:"backchannel_logout_session_required,omitempty"`
+        BackchannelLogoutURI              *string                `json:"backchannel_logout_uri,omitempty"`
+        ClientID                          *string                `json:"client_id,omitempty"`
+        ClientName                        *string                `json:"client_name,omitempty"`
+        ClientSecret                      *string                `json:"client_secret,omitempty"`
+        ClientSecretExpireAt              *int64                 `json:"client_secret_expires_at,omitempty"`
+        ClientURI                         *string                `json:"client_uri,omitempty"`
+        Contacts                          []string               `json:"contacts,omitempty"`
+        CreatedAt                         *string                `json:"created_at,omitempty"`
+        FrontchannelLogoutSessionRequired *bool                  `json:"frontchannel_logout_session_required,omitempty"`
+        FrontchannelLogoutURI             *string                `json:"frontchannel_logout_uri,omitempty"`
+        GrantTypes                        []string               `json:"grant_types,omitempty"`
+        JWKS                              map[string]interface{} `json:"jwks,omitempty"`
+        JWKSURI                           *string                `json:"jwks_uri,omitempty"`
+        LogoURI                           *string                `json:"logo_uri,omitempty"`
+        Metadata                          map[string]interface{} `json:"metadata,omitempty"`
+        Owner                             *string                `json:"owner,omitempty"`
+        PolicyURI                         *string                `json:"policy_uri,omitempty"`
+        PostLogoutRedirectURIs            []string               `json:"post_logout_redirect_uris,omitempty"`
+        RedirectURIs                      []string               `json:"redirect_uris,omitempty"`
+        RequestObjectSigningAlg           *string                `json:"request_object_signing_alg,omitempty"`
+        RequestURIs                       []string               `json:"request_uris,omitempty"`
+        ResponseTypes                     []string               `json:"response_types,omitempty"`
+        Scope                             *string                `json:"scope,omitempty"`
+        SectorIdentifierURI               *string                `json:"sector_identifier_uri,omitempty"`
+        SubjectType                       *string                `json:"subject_type,omitempty"`
+        TokenEndpointAuthMethod           *string                `json:"token_endpoint_auth_method,omitempty"`
+        TokenEndpointAuthSigningAlg       *string                `json:"token_endpoint_auth_signing_alg,omitempty"`
+        TOSURI                            *string                `json:"tos_uri,omitempty"`
+        UpdatedAt                         *string                `json:"updated_at,omitempty"`
+        UserinfoSignedResponseAlg         *string                `json:"userinfo_signed_response_alg,omitempty"`
+}
+
+// -- log writer
+
+type myIOWriter struct {
+        t    *testing.T
+        mode string
+}
+
+func (w *myIOWriter) Write(p []byte) (n int, err error) <span class="cov0" title="0">{
+        w.t.Log(w.mode, ": ", string(p))
+        return len(p), nil
+}</span>
+
+func hydraTestConfigFunc(t *testing.T, port string) map[string]interface{} <span class="cov1" title="1">{
+        return map[string]interface{}{
+                "serve": map[string]interface{}{
+                        "cookies": map[string]interface{}{
+                                "same_site_mode": "Lax",
+                        },
+                },
+                "urls": map[string]interface{}{
+                        "self": map[string]interface{}{
+                                "issuer": fmt.Sprintf("http://127.0.0.1:%s", port),
+                        },
+                        "consent": "http://127.0.0.1:3000/consent",
+                        "login":   "http://127.0.0.1:3000/login",
+                        "logout":  "http://127.0.0.1:3000/logout",
+                },
+                "secrets": map[string]interface{}{
+                        "system": []string{"youReallyNeedToChangeThis"},
+                },
+                "strategies": map[string]interface{}{
+                        "access_token": "jwt",
+                },
+                "oidc": map[string]interface{}{
+                        "subject_identifiers": map[string]interface{}{
+                                "supported_types": []string{"pairwise", "public"},
+                                "pairwise": map[string]interface{}{
+                                        "salt": "youReallyNeedToChangeThis",
+                                },
+                        },
+                },
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package keto
+
+import (
+        "fmt"
+        "io/ioutil"
+        "net/http"
+        "os"
+        "strconv"
+        "testing"
+        "time"
+
+        "github.com/ory/dockertest"
+        dc "github.com/ory/dockertest/docker"
+        "gopkg.in/yaml.v2"
+
+        // postgres library
+        _ "github.com/lib/pq"
+
+        ketoClient "github.com/ory/keto-client-go/client"
+
+        "github.com/radekg/app-kit-orytest/common"
+        "github.com/radekg/app-kit-orytest/postgres"
+)
+
+const (
+        // DefaultKetoImageName specifies the Keto docker image name to use in tests.
+        DefaultKetoImageName = "oryd/keto"
+        // DefaultKetoEnvVarImageName is the environment variable name for default Keto docker image name.
+        DefaultKetoEnvVarImageName = "TEST_ORY_KETO_IMAGE_NAME"
+        // DefaultKetoImageVersion specifies the Keto docker image version to use in tests.
+        DefaultKetoImageVersion = "v0.6.0-alpha.1"
+        // DefaultKetoEnvVarImageVersion is the environment variable name for default Keto docker image version.
+        DefaultKetoEnvVarImageVersion = "TEST_ORY_KETO_IMAGE_VERSION"
+)
+
+// TestEnvContext represents a test keto environment context.
+type TestEnvContext interface {
+        Cleanup()
+        WriteClient() *ketoClient.OryKeto
+        ReadClient() *ketoClient.OryKeto
+        Pool() *dockertest.Pool
+        WritePort() string
+        ReadPort() string
+}
+
+// SetupTestKeto sets up keto environment for tests.
+func SetupTestKeto(t *testing.T, postgresCtx postgres.TestEnvContext, namespace ...string) TestEnvContext <span class="cov1" title="1">{
+
+        // after every successful step, store a cleanup function here:
+        closables := []func(){
+                postgresCtx.Cleanup,
+        }
+
+        // used in case of a failure during setup:
+        closeClosables := func(closables []func()) </span><span class="cov0" title="0">{
+                for _, closable := range closables </span><span class="cov0" title="0">{
+                        defer closable()
+                }</span>
+        }
+
+        // close all reasources in reverse order:
+        <span class="cov1" title="1">prependClosable := func(closable func(), closables []func()) []func() </span><span class="cov8" title="6">{
+                return append([]func(){closable}, closables...)
+        }</span>
+
+        // create a temp file for the configuration:
+        <span class="cov1" title="1">ketoConfig, tempFileErr := ioutil.TempFile("", "keto-config")
+        if tempFileErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected temp Keto configuration file to be created but received an error: '%v'", tempFileErr)
+        }</span>
+
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: removing keto config")
+                os.Remove(ketoConfig.Name())
+        }</span>, closables)
+
+        // create a temp directory to hold namespaces:
+        <span class="cov1" title="1">ketoNamespacesDir, tempDirErr := ioutil.TempDir("", "keto-namespaces")
+        if tempDirErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected temp Keto namespaces directory to be created but received an error: '%v'", tempDirErr)
+        }</span>
+
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: removing keto namespaces directory")
+                os.RemoveAll(ketoNamespacesDir)
+        }</span>, closables)
+
+        // we need two random ports:
+        <span class="cov1" title="1">writeListener, err := common.NewRandomPortSupplier()
+        if err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed creating write random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing write random port listener, if not closed yet")
+                writeListener.Cleanup()
+        }</span>, closables)
+        <span class="cov1" title="1">readListener, err := common.NewRandomPortSupplier()
+        if err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed creating read random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing read random port listener, if not closed yet")
+                readListener.Cleanup()
+        }</span>, closables)
+
+        <span class="cov1" title="1">if err := writeListener.Discover(); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed extracting host and port from write random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">if err := readListener.Discover(); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed extracting host and port from read random port listener: '%v'", err)
+        }</span>
+
+        // Start keto:
+
+        <span class="cov1" title="1">fetchedKetoWritePort, _ := writeListener.DiscoveredPort()
+        fetchedKetoReadPort, _ := readListener.DiscoveredPort()
+
+        // write test configuration to the temp file:
+
+        ketoSerializedConfigBytes, yamlErr := yaml.Marshal(ketoTestConfigFunc(t, fetchedKetoWritePort, fetchedKetoReadPort, namespace))
+        if yamlErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed serializing Hydra config to YAML: '%v'", err)
+        }</span>
+
+        <span class="cov1" title="1">if writeErr := ioutil.WriteFile(ketoConfig.Name(), ketoSerializedConfigBytes, 0777); writeErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected temp Hydra configuration file to be written but received an error: '%v'", writeErr)
+        }</span>
+
+        <span class="cov1" title="1">t.Log("Keto config written...", ketoConfig.Name())
+
+        // create new pool using the default Docker endpoint:
+        pool, poolErr := dockertest.NewPool("")
+        if poolErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected docker pool to come up but received: '%v'", poolErr)
+        }</span>
+
+        // Now, we need to run keto migrate, postgres is starting but keto retries, we need to wait for it...
+        <span class="cov1" title="1">migrateOptions := &amp;dockertest.RunOptions{
+                Repository: common.GetEnvOrDefault(DefaultKetoEnvVarImageName, DefaultKetoImageName),
+                Tag:        common.GetEnvOrDefault(DefaultKetoEnvVarImageVersion, DefaultKetoImageVersion),
+                Mounts: []string{
+                        fmt.Sprintf("%s:/etc/config/keto/keto.yml", ketoConfig.Name()),
+                        fmt.Sprintf("%s:/keto_namespaces", ketoNamespacesDir),
+                },
+                Cmd: []string{"migrate", "up", "--all-namespaces", "-c", "/etc/config/keto/keto.yml", "--yes"},
+                Env: []string{
+                        "LOG_LEVEL=trace",
+                        fmt.Sprintf("DSN=postgres://%s:%s@%s:%s/%s?sslmode=disable&amp;max_conns=20&amp;max_idle_conns=4",
+                                postgresCtx.PostgresUser(),
+                                postgresCtx.PostgresPass(),
+                                postgresCtx.ContainerIP(),
+                                postgresCtx.ContainerPrivatePort(),
+                                postgresCtx.PostgresDatabase()),
+                },
+        }
+        ketoMigrate, ketoErr := pool.RunWithOptions(migrateOptions, func(config *dc.HostConfig) </span><span class="cov1" title="1">{
+                // Keto migrate retries automatically but for compatibility, we make sure it does...
+                config.RestartPolicy.Name = "on-failure"
+        }</span>)
+        <span class="cov1" title="1">if ketoErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected keto migrate to start but received: '%v'", ketoErr)
+        }</span>
+
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing keto migrate")
+                ketoMigrate.Close()
+                pool.Purge(ketoMigrate)
+        }</span>, closables)
+
+        <span class="cov1" title="1">if err := common.WaitForContainerExit0(t, pool, ketoMigrate.Container.ID); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("error while waiting for container to finish with exist status 0: '%v'", err)
+        }</span>
+
+        // create test keto run options:
+        <span class="cov1" title="1">options := &amp;dockertest.RunOptions{
+                Repository: common.GetEnvOrDefault(DefaultKetoEnvVarImageName, DefaultKetoImageName),
+                Tag:        common.GetEnvOrDefault(DefaultKetoEnvVarImageVersion, DefaultKetoImageVersion),
+                Mounts: []string{
+                        fmt.Sprintf("%s:/etc/config/keto/keto.yml", ketoConfig.Name()),
+                        fmt.Sprintf("%s:/keto_namespaces", ketoNamespacesDir),
+                },
+                Cmd: []string{"serve", "-c", "/etc/config/keto/keto.yml", "all"},
+                ExposedPorts: []string{
+                        fmt.Sprintf("%s/tcp", fetchedKetoWritePort),
+                        fmt.Sprintf("%s/tcp", fetchedKetoReadPort)},
+                PortBindings: map[dc.Port][]dc.PortBinding{
+                        dc.Port(fmt.Sprintf("%s/tcp", fetchedKetoWritePort)): {{HostIP: "0.0.0.0", HostPort: fetchedKetoWritePort}},
+                        dc.Port(fmt.Sprintf("%s/tcp", fetchedKetoReadPort)):  {{HostIP: "0.0.0.0", HostPort: fetchedKetoReadPort}},
+                },
+                Env: []string{
+                        "LOG_LEVEL=trace",
+                        fmt.Sprintf("DSN=postgres://%s:%s@%s:%s/%s?sslmode=disable&amp;max_conns=20&amp;max_idle_conns=4",
+                                postgresCtx.PostgresUser(),
+                                postgresCtx.PostgresPass(),
+                                postgresCtx.ContainerIP(),
+                                postgresCtx.ContainerPrivatePort(),
+                                postgresCtx.PostgresDatabase()),
+                },
+        }
+
+        // make sure the random keto ports are free before we request the container to start:
+        writeListener.Cleanup()
+        readListener.Cleanup()
+
+        // start the container:
+        keto, ketoErr := pool.RunWithOptions(options, func(config *dc.HostConfig) </span>{<span class="cov1" title="1">}</span>)
+        <span class="cov1" title="1">if ketoErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected keto to start but received: '%v'", ketoErr)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing keto")
+                keto.Close()
+                pool.Purge(keto)
+        }</span>, closables)
+
+        <span class="cov1" title="1">benchStart := time.Now()
+
+        chanKetoWriteAPISuccess := make(chan struct{}, 1)
+        chanKetoWriteAPIError := make(chan error, 1)
+
+        chanKetoReadAPISuccess := make(chan struct{}, 1)
+        chanKetoReadAPIError := make(chan error, 1)
+
+        ketoWritePort := keto.GetPort(fmt.Sprintf("%s/tcp", fetchedKetoWritePort))
+        ketoReadPort := keto.GetPort(fmt.Sprintf("%s/tcp", fetchedKetoReadPort))
+
+        t.Logf("Keto started with container ID '%s'", keto.Container.ID)
+        t.Log(" ==&gt; waiting for the write REST API to start replying...")
+
+        apiTestFunc := func(callPort string, chanSuccess chan struct{}, chanError chan error) func() </span><span class="cov3" title="2">{
+                return func() </span><span class="cov3" title="2">{
+                        poolRetryErr := pool.Retry(func() error </span><span class="cov5" title="3">{
+                                request, requestErr := http.NewRequest(http.MethodGet, fmt.Sprintf("http://127.0.0.1:%s/health/alive", callPort), nil)
+                                if requestErr != nil </span><span class="cov0" title="0">{
+                                        t.Logf("expected /health/alive request to be constructed but received: '%v'", requestErr)
+                                        return requestErr
+                                }</span>
+                                <span class="cov5" title="3">httpClient := &amp;http.Client{}
+                                response, responseErr := httpClient.Do(request)
+                                if responseErr != nil </span><span class="cov1" title="1">{
+                                        t.Logf("expected /health/alive to reply but received: '%v'", responseErr)
+                                        return responseErr
+                                }</span>
+                                <span class="cov3" title="2">responseBytes, responseReadErr := ioutil.ReadAll(response.Body)
+                                if responseErr != nil </span><span class="cov0" title="0">{
+                                        t.Logf("failed reading response body: '%v'", responseReadErr)
+                                        return responseErr
+                                }</span>
+                                <span class="cov3" title="2">defer response.Body.Close()
+                                t.Log("keto /health/alive replied with status: ", response.StatusCode, string(responseBytes))
+                                if response.StatusCode == http.StatusOK </span><span class="cov3" title="2">{
+                                        t.Logf("keto /health/alive replied with status OK, body '%s'", string(responseBytes))
+                                        return nil
+                                }</span>
+                                <span class="cov0" title="0">t.Logf("keto /health/alive replied with status other than OK: '%d', body: '%s'", response.StatusCode, string(responseBytes))
+                                return fmt.Errorf("keto rest status code other than OK: %d", response.StatusCode)</span>
+                        })
+                        <span class="cov3" title="2">if poolRetryErr == nil </span><span class="cov3" title="2">{
+                                close(chanSuccess)
+                                return
+                        }</span>
+                        <span class="cov0" title="0">chanError &lt;- poolRetryErr</span>
+                }
+        }
+
+        <span class="cov1" title="1">go apiTestFunc(ketoWritePort, chanKetoWriteAPISuccess, chanKetoWriteAPIError)()
+
+        select </span>{
+        case &lt;-chanKetoWriteAPISuccess:<span class="cov1" title="1">
+                t.Logf("keto REST API replied after: %s", time.Now().Sub(benchStart).String())</span>
+        case receivedError := &lt;-chanKetoWriteAPIError:<span class="cov0" title="0">
+                closeClosables(closables)
+                t.Fatalf("keto REST API wait finished with error: '%v'", receivedError)</span>
+        case &lt;-time.After(time.Second * 30):<span class="cov0" title="0">
+                closeClosables(closables)
+                t.Fatalf("keto REST API did not start communicating within timeout")</span>
+        }
+
+        <span class="cov1" title="1">t.Logf(" ==&gt; waiting for the read REST API to start replying...")
+
+        go apiTestFunc(ketoReadPort, chanKetoReadAPISuccess, chanKetoReadAPIError)()
+
+        select </span>{
+        case &lt;-chanKetoReadAPISuccess:<span class="cov1" title="1">
+                t.Logf("keto REST API replied after: %s", time.Now().Sub(benchStart).String())</span>
+        case receivedError := &lt;-chanKetoReadAPIError:<span class="cov0" title="0">
+                closeClosables(closables)
+                t.Fatalf("keto REST API wait finished with error: '%v'", receivedError)</span>
+        case &lt;-time.After(time.Second * 30):<span class="cov0" title="0">
+                closeClosables(closables)
+                t.Fatalf("keto REST API did not start communicating within timeout")</span>
+        }
+
+        <span class="cov1" title="1">return &amp;testKetoContext{
+                CleanupFuncValue: func() </span><span class="cov1" title="1">{
+                        for _, closable := range closables </span><span class="cov8" title="7">{
+                                closable()
+                        }</span>
+                },
+                WriteClientValue: ketoClient.NewHTTPClientWithConfig(nil,
+                        ketoClient.
+                                DefaultTransportConfig().
+                                WithSchemes([]string{"http"}).
+                                WithHost(fmt.Sprintf("localhost:%s", ketoWritePort))),
+                ReadClientValue: ketoClient.NewHTTPClientWithConfig(nil,
+                        ketoClient.
+                                DefaultTransportConfig().
+                                WithSchemes([]string{"http"}).
+                                WithHost(fmt.Sprintf("localhost:%s", ketoReadPort))),
+                PoolValue:      pool,
+                WritePortValue: ketoWritePort,
+                ReadPortValue:  ketoReadPort,
+        }
+
+}
+
+type testKetoContext struct {
+        CleanupFuncValue func()
+        WriteClientValue *ketoClient.OryKeto
+        ReadClientValue  *ketoClient.OryKeto
+        PoolValue        *dockertest.Pool
+        WritePortValue   string
+        ReadPortValue    string
+}
+
+func (ctx *testKetoContext) Cleanup() <span class="cov1" title="1">{
+        ctx.CleanupFuncValue()
+}</span>
+
+func (ctx *testKetoContext) WriteClient() *ketoClient.OryKeto <span class="cov10" title="9">{
+        return ctx.WriteClientValue
+}</span>
+
+func (ctx *testKetoContext) ReadClient() *ketoClient.OryKeto <span class="cov1" title="1">{
+        return ctx.ReadClientValue
+}</span>
+
+func (ctx *testKetoContext) Pool() *dockertest.Pool <span class="cov0" title="0">{
+        return ctx.PoolValue
+}</span>
+
+func (ctx *testKetoContext) WritePort() string <span class="cov0" title="0">{
+        return ctx.WritePortValue
+}</span>
+
+func (ctx *testKetoContext) ReadPort() string <span class="cov0" title="0">{
+        return ctx.ReadPortValue
+}</span>
+
+func ketoTestConfigFunc(t *testing.T, writePort, readPort string, namespaces []string) map[string]interface{} <span class="cov1" title="1">{
+        return map[string]interface{}{
+                "namespaces": func() []*ketoNamespace </span><span class="cov1" title="1">{
+                        items := []*ketoNamespace{}
+                        for idx, ns := range namespaces </span><span class="cov1" title="1">{
+                                items = append(items, &amp;ketoNamespace{
+                                        ID:   idx,
+                                        Name: ns,
+                                })
+                        }</span>
+                        <span class="cov1" title="1">return items</span>
+                }(),
+                "serve": map[string]interface{}{
+                        "write": &amp;ketoServe{
+                                Host: "0.0.0.0",
+                                Port: func() int <span class="cov1" title="1">{
+                                        i, _ := strconv.Atoi(writePort)
+                                        return i
+                                }</span>(),
+                        },
+                        "read": &amp;ketoServe{
+                                Host: "0.0.0.0",
+                                Port: func() int <span class="cov1" title="1">{
+                                        i, _ := strconv.Atoi(readPort)
+                                        return i
+                                }</span>(),
+                        },
+                },
+        }
+}
+
+type ketoNamespace struct {
+        ID   int    `yaml:"id"`
+        Name string `yaml:"name"`
+}
+type ketoServe struct {
+        Host string `yaml:"host"`
+        Port int    `yaml:"port"`
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package kratos
+
+import (
+        "fmt"
+        "io/ioutil"
+        "net/http"
+        "net/http/cookiejar"
+        "net/http/httptest"
+        "os"
+        "strconv"
+        "testing"
+        "time"
+
+        "github.com/ory/dockertest"
+        dc "github.com/ory/dockertest/docker"
+        "gopkg.in/yaml.v2"
+
+        kratosClient "github.com/ory/kratos-client-go/client"
+        kratosAdmin "github.com/ory/kratos-client-go/client/admin"
+        kratosPublic "github.com/ory/kratos-client-go/client/public"
+
+        "github.com/radekg/app-kit-orytest/common"
+        "github.com/radekg/app-kit-orytest/mailslurper"
+        "github.com/radekg/app-kit-orytest/postgres"
+)
+
+const (
+        // DefaultKratosImageName specifies the Kratos docker image name to use in tests.
+        DefaultKratosImageName = "oryd/kratos"
+        // DefaultKratosEnvVarImageName is the environment variable name for default Kratos docker image name.
+        DefaultKratosEnvVarImageName = "TEST_ORY_KRATOS_IMAGE_NAME"
+        // DefaultKratosImageVersion specifies the Kratos docker image version to use in tests.
+        DefaultKratosImageVersion = "v0.5.5-alpha.1"
+        // DefaultKratosEnvVarImageVersion is the environment variable name for default Kratos docker image version.
+        DefaultKratosEnvVarImageVersion = "TEST_ORY_KRATOS_IMAGE_VERSION"
+)
+
+// TestEnvContext represents a test Kratos environment context.
+type TestEnvContext interface {
+        AdminPort() string
+        Cleanup()
+        ClientAdmin() kratosAdmin.ClientService
+        ClientPublic() kratosPublic.ClientService
+        Pool() *dockertest.Pool
+        PublicPort() string
+}
+
+// SetupTestKratos sets up Kratos environment for tests.
+func SetupTestKratos(t *testing.T,
+        postgresCtx postgres.TestEnvContext,
+        mailslurperCtx mailslurper.TestEnvContext,
+        selfService TestSelfServiceConfiguration) TestEnvContext <span class="cov1" title="1">{
+
+        cleanupContainers := true
+
+        // after every successful step, store a cleanup function here:
+        closables := []func(){
+                postgresCtx.Cleanup,
+                mailslurperCtx.Cleanup,
+        }
+
+        // used in case of a failure during setup:
+        closeClosables := func(closables []func()) </span><span class="cov0" title="0">{
+                for _, closable := range closables </span><span class="cov0" title="0">{
+                        defer closable()
+                }</span>
+        }
+
+        // close all reasources in reverse order:
+        <span class="cov1" title="1">prependClosable := func(closable func(), closables []func()) []func() </span><span class="cov8" title="6">{
+                return append([]func(){closable}, closables...)
+        }</span>
+
+        // public Kratos port:
+        <span class="cov1" title="1">kratosAdminListener, err := common.NewRandomPortSupplier()
+        if err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed creating kratos admin random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing kratos admin random port listener, if not closed yet")
+                kratosAdminListener.Cleanup()
+        }</span>, closables)
+
+        // public Kratos port:
+        <span class="cov1" title="1">kratosPublicListener, err := common.NewRandomPortSupplier()
+        if err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed creating kratos public random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing kratos public random port listener, if not closed yet")
+                kratosPublicListener.Cleanup()
+        }</span>, closables)
+
+        <span class="cov1" title="1">if err := kratosAdminListener.Discover(); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed extracting host and port from kratos admin random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">if err := kratosPublicListener.Discover(); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed extracting host and port from kratos public random port listener: '%v'", err)
+        }</span>
+
+        <span class="cov1" title="1">fetchedKratosAdminRandomPort, _ := kratosAdminListener.DiscoveredPort()
+        fetchedKratosPublicRandomPort, _ := kratosPublicListener.DiscoveredPort()
+
+        // create new pool using the default Docker endpoint:
+        pool, poolErr := dockertest.NewPool("")
+        if poolErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected docker pool to come up but received: '%v'", poolErr)
+        }</span>
+
+        // create a temp file for the identity:
+        <span class="cov1" title="1">kratosIdentity, tempFileErr := ioutil.TempFile("", "kratos-identity")
+        if tempFileErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected temp Kratos identity file to be created but received an error: '%v'", tempFileErr)
+        }</span>
+
+        <span class="cov1" title="1">if writeErr := ioutil.WriteFile(kratosIdentity.Name(), []byte(kratosTestIdentity), 0777); writeErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected temp Kratos configuration file to be written but received an error: '%v'", writeErr)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: removing kratos identity")
+                os.Remove(kratosIdentity.Name())
+        }</span>, closables)
+
+        <span class="cov1" title="1">t.Log("Kratos identity written...", kratosIdentity.Name())
+
+        // create a temp file for the configuration:
+        kratosConfig, tempFileErr := ioutil.TempFile("", "kratos-config")
+        if tempFileErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected temp Kratos configuration file to be created but received an error: '%v'", tempFileErr)
+        }</span>
+
+        <span class="cov1" title="1">kratosTestConfig := kratosTestConfigFunc(t, fetchedKratosAdminRandomPort, fetchedKratosPublicRandomPort,
+                mailslurperCtx,
+                selfService)
+        kratosSerializedConfigBytes, yamlErr := yaml.Marshal(kratosTestConfig)
+        if yamlErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed serializing Kratos config to YAML: '%v'", err)
+        }</span>
+
+        <span class="cov1" title="1">if writeErr := ioutil.WriteFile(kratosConfig.Name(), kratosSerializedConfigBytes, 0777); writeErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected temp Kratos configuration file to be written but received an error: '%v'", writeErr)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: removing kratos config")
+                os.Remove(kratosConfig.Name())
+        }</span>, closables)
+
+        <span class="cov1" title="1">t.Log("Kratos config written...", kratosConfig.Name())
+
+        // Now, we need to run kratos migrate, postgres is starting but kratos retries, we need to wait for it...
+        migrateOptions := &amp;dockertest.RunOptions{
+                Repository: common.GetEnvOrDefault(DefaultKratosEnvVarImageName, DefaultKratosImageName),
+                Tag:        common.GetEnvOrDefault(DefaultKratosEnvVarImageVersion, DefaultKratosImageVersion),
+                Mounts: []string{
+                        fmt.Sprintf("%s:/etc/config/kratos/identity.schema.json", kratosIdentity.Name()),
+                        fmt.Sprintf("%s:/etc/config/kratos/kratos.yml", kratosConfig.Name()),
+                },
+                Cmd: []string{"migrate", "-c", "/etc/config/kratos/kratos.yml", "sql", "-e", "--yes"},
+                Env: []string{
+                        fmt.Sprintf("DSN=postgres://%s:%s@%s:%s/%s?sslmode=disable&amp;max_conns=20&amp;max_idle_conns=4",
+                                postgresCtx.PostgresUser(),
+                                postgresCtx.PostgresPass(),
+                                postgresCtx.ContainerIP(),
+                                postgresCtx.ContainerPrivatePort(),
+                                postgresCtx.PostgresDatabase()),
+                },
+        }
+        kratosMigrate, kratosErr := pool.RunWithOptions(migrateOptions, func(config *dc.HostConfig) </span><span class="cov1" title="1">{
+                // Keto migrate retries automatically but for compatibility, we make sure it does...
+                config.RestartPolicy.Name = "on-failure"
+        }</span>)
+        <span class="cov1" title="1">if kratosErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected kratos migrate to start but received: '%v'", kratosErr)
+        }</span>
+
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing kratos migrate")
+                kratosMigrate.Close()
+                pool.Purge(kratosMigrate)
+        }</span>, closables)
+
+        <span class="cov1" title="1">if err := common.WaitForContainerExit0(t, pool, kratosMigrate.Container.ID); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("error while waiting for container to finish with exist status 0: '%v'", err)
+        }</span>
+
+        // create test kratos run options:
+        <span class="cov1" title="1">options := &amp;dockertest.RunOptions{
+                Repository: common.GetEnvOrDefault("TEST_ORY_KRATOS_IMAGE_NAME", DefaultKratosImageName),
+                Tag:        common.GetEnvOrDefault("TEST_ORY_KRATOS_IMAGE_NAME", DefaultKratosImageVersion),
+                Mounts: []string{
+                        fmt.Sprintf("%s:/etc/config/kratos/identity.schema.json", kratosIdentity.Name()),
+                        fmt.Sprintf("%s:/etc/config/kratos/kratos.yml", kratosConfig.Name()),
+                },
+                Cmd: []string{"serve", "-c", "/etc/config/kratos/kratos.yml", "--dev"},
+                ExposedPorts: []string{
+                        fmt.Sprintf("%s/tcp", fetchedKratosAdminRandomPort),
+                        fmt.Sprintf("%s/tcp", fetchedKratosPublicRandomPort)},
+                PortBindings: map[dc.Port][]dc.PortBinding{
+                        dc.Port(fmt.Sprintf("%s/tcp", fetchedKratosAdminRandomPort)):  {{HostIP: "0.0.0.0", HostPort: fetchedKratosAdminRandomPort}},
+                        dc.Port(fmt.Sprintf("%s/tcp", fetchedKratosPublicRandomPort)): {{HostIP: "0.0.0.0", HostPort: fetchedKratosPublicRandomPort}},
+                },
+                Env: []string{
+                        fmt.Sprintf("SERVE_ADMIN_PORT=%s", fetchedKratosAdminRandomPort),
+                        fmt.Sprintf("SERVE_PUBLIC_PORT=%s", fetchedKratosPublicRandomPort),
+                        fmt.Sprintf("DSN=postgres://%s:%s@%s:%s/%s?sslmode=disable&amp;max_conns=20&amp;max_idle_conns=4",
+                                postgresCtx.PostgresUser(),
+                                postgresCtx.PostgresPass(),
+                                postgresCtx.ContainerIP(),
+                                postgresCtx.ContainerPrivatePort(),
+                                postgresCtx.PostgresDatabase()),
+                },
+        }
+
+        // make sure the random kratos port is free before we request the container to start:
+        kratosAdminListener.Cleanup()
+        kratosPublicListener.Cleanup()
+
+        // start the container:
+        kratos, kratosErr := pool.RunWithOptions(options, func(config *dc.HostConfig) </span><span class="cov1" title="1">{
+                config.RestartPolicy.Name = "on-failure"
+        }</span>)
+        <span class="cov1" title="1">if kratosErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected kratos to start but received: '%v'", kratosErr)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing kratos")
+                if cleanupContainers </span><span class="cov1" title="1">{
+                        kratos.Close()
+                        pool.Purge(kratos)
+                }</span>
+        }, closables)
+
+        <span class="cov1" title="1">benchStart := time.Now()
+        chanKratosRESTAPISuccess := make(chan struct{}, 1)
+        chanKratosRESTAPIError := make(chan error, 1)
+
+        kratosAdminPort := kratos.GetPort(fmt.Sprintf("%s/tcp", fetchedKratosAdminRandomPort))
+        kratosPublicPort := kratos.GetPort(fmt.Sprintf("%s/tcp", fetchedKratosPublicRandomPort))
+
+        t.Logf("Kratos started with container ID '%s', waiting for the REST API to start replying...", kratos.Container.ID)
+
+        go func() </span><span class="cov1" title="1">{
+                poolRetryErr := pool.Retry(func() error </span><span class="cov3" title="2">{
+                        request, requestErr := http.NewRequest(http.MethodGet, fmt.Sprintf("http://127.0.0.1:%s/health/ready", kratosPublicPort), nil)
+                        if requestErr != nil </span><span class="cov0" title="0">{
+                                t.Logf("expected /health/ready request to be constructed but received: '%v'", requestErr)
+                                return requestErr
+                        }</span>
+                        <span class="cov3" title="2">httpClient := &amp;http.Client{}
+                        response, responseErr := httpClient.Do(request)
+                        if responseErr != nil </span><span class="cov1" title="1">{
+                                t.Logf("expected /health/ready to reply but received: '%v'", responseErr)
+                                return responseErr
+                        }</span>
+                        <span class="cov1" title="1">defer response.Body.Close()
+                        t.Log("kratos /health/ready replied with status: ", response.StatusCode)
+                        if response.StatusCode == http.StatusOK </span><span class="cov1" title="1">{
+                                t.Logf("kratos /health/ready replied with status OK")
+                                return nil
+                        }</span>
+                        <span class="cov0" title="0">t.Logf("kratos /health/ready replied with status other than OK: '%d'", response.StatusCode)
+                        return fmt.Errorf("kratos rest status code other than OK: %d", response.StatusCode)</span>
+                })
+                <span class="cov1" title="1">if poolRetryErr == nil </span><span class="cov1" title="1">{
+                        close(chanKratosRESTAPISuccess)
+                        return
+                }</span>
+                <span class="cov0" title="0">chanKratosRESTAPIError &lt;- poolRetryErr</span>
+        }()
+
+        <span class="cov1" title="1">select </span>{
+        case &lt;-chanKratosRESTAPISuccess:<span class="cov1" title="1">
+                t.Logf("kratos REST API replied after: %s", time.Now().Sub(benchStart).String())</span>
+        case receivedError := &lt;-chanKratosRESTAPIError:<span class="cov0" title="0">
+                closeClosables(closables)
+                t.Fatalf("kratos REST API wait finished with error: '%v'", receivedError)</span>
+        case &lt;-time.After(time.Second * 30):<span class="cov0" title="0">
+                closeClosables(closables)
+                t.Fatalf("kratos REST API did not start communicating within timeout")</span>
+        }
+
+        <span class="cov1" title="1">return &amp;testKratosContext{
+                AdminPortValue: kratosAdminPort,
+                CleanupFuncValue: func() </span><span class="cov1" title="1">{
+                        for _, closable := range closables </span><span class="cov9" title="8">{
+                                closable()
+                        }</span>
+                },
+                ClientAdminValue: kratosClient.NewHTTPClientWithConfig(nil,
+                        kratosClient.
+                                DefaultTransportConfig().
+                                WithSchemes([]string{"http"}).
+                                WithHost(fmt.Sprintf("localhost:%s", kratosAdminPort))),
+                ClientPublicValue: kratosClient.NewHTTPClientWithConfig(nil,
+                        kratosClient.
+                                DefaultTransportConfig().
+                                WithSchemes([]string{"http"}).
+                                WithHost(fmt.Sprintf("localhost:%s", kratosPublicPort))),
+                PoolValue:       pool,
+                PublicPortValue: kratosPublicPort,
+        }
+
+}
+
+type testKratosContext struct {
+        AdminPortValue    string
+        CleanupFuncValue  func()
+        ClientAdminValue  *kratosClient.OryKratos
+        ClientPublicValue *kratosClient.OryKratos
+        PoolValue         *dockertest.Pool
+        PublicPortValue   string
+}
+
+func (ctx *testKratosContext) AdminPort() string <span class="cov0" title="0">{
+        return ctx.AdminPortValue
+}</span>
+
+func (ctx *testKratosContext) Cleanup() <span class="cov1" title="1">{
+        ctx.CleanupFuncValue()
+}</span>
+
+func (ctx *testKratosContext) ClientAdmin() kratosAdmin.ClientService <span class="cov1" title="1">{
+        return ctx.ClientAdminValue.Admin
+}</span>
+
+func (ctx *testKratosContext) ClientPublic() kratosPublic.ClientService <span class="cov10" title="10">{
+        return ctx.ClientPublicValue.Public
+}</span>
+
+func (ctx *testKratosContext) Pool() *dockertest.Pool <span class="cov0" title="0">{
+        return ctx.PoolValue
+}</span>
+
+func (ctx *testKratosContext) PublicPort() string <span class="cov0" title="0">{
+        return ctx.PublicPortValue
+}</span>
+
+func kratosTestConfigFunc(t *testing.T, adminPort, publicPort string,
+        mailslurperCtx mailslurper.TestEnvContext,
+        selfService TestSelfServiceConfiguration) map[string]interface{} <span class="cov1" title="1">{
+
+        publicPortInt, _ := strconv.Atoi(publicPort)
+
+        return map[string]interface{}{
+                "serve": map[string]interface{}{
+                        "public": map[string]interface{}{
+                                "base_url": func() string </span><span class="cov1" title="1">{
+                                        if selfService.BasePublicURL() == "" </span><span class="cov1" title="1">{
+                                                return fmt.Sprintf("http://127.0.0.1:%s/", publicPort)
+                                        }</span>
+                                        <span class="cov0" title="0">return selfService.BasePublicURL()</span>
+                                }(),
+                                "cors": map[string]interface{}{
+                                        "enabled": true,
+                                },
+                                "host": "0.0.0.0",
+                                "port": publicPortInt,
+                        },
+                        "admin": map[string]interface{}{
+                                "base_url": fmt.Sprintf("http://127.0.0.1:%s/", adminPort),
+                        },
+                },
+                "log": map[string]interface{}{
+                        "level":                 "trace",
+                        "format":                "text",
+                        "leak_sensitive_values": true,
+                },
+                "secrets": map[string]interface{}{
+                        "cookie": []string{"PLEASE-CHANGE-ME-I-AM-VERY-INSECURE"},
+                },
+                "hashers": map[string]interface{}{
+                        "argon2": map[string]interface{}{
+                                "parallelism": 1,
+                                "memory":      131072,
+                                "iterations":  2,
+                                "salt_length": 16,
+                                "key_length":  16,
+                        },
+                },
+                "identity": map[string]interface{}{
+                        "default_schema_url": "file:///etc/config/kratos/identity.schema.json",
+                },
+                "courier": map[string]interface{}{
+                        "smtp": map[string]interface{}{
+                                "connection_uri": fmt.Sprintf("smtps://test:test@%s:%s/?skip_ssl_verify=true",
+                                        mailslurperCtx.ContainerIP(),
+                                        mailslurperCtx.ContainerSMTPPort()),
+                        },
+                },
+                "selfservice": map[string]interface{}{
+                        "default_browser_return_url": selfService.DefaultBrowserReturnURL(),
+                        "whitelisted_return_urls":    selfService.WhitelistedReturnURLs(),
+                        "methods": map[string]interface{}{
+                                "password": map[string]interface{}{
+                                        "enabled": true,
+                                },
+                        },
+                        "flows": map[string]interface{}{
+                                "error": map[string]interface{}{
+                                        "ui_url": selfService.ErrorURL(),
+                                },
+                                "login": map[string]interface{}{
+                                        "lifespan": "10m",
+                                        "ui_url":   selfService.LoginURL(),
+                                },
+                                "logout": map[string]interface{}{
+                                        "after": map[string]interface{}{
+                                                "default_browser_return_url": selfService.LoginURL(),
+                                        },
+                                },
+                                "recovery": map[string]interface{}{
+                                        "enabled": true,
+                                        "ui_url":  selfService.RecoveryURL(),
+                                },
+                                "registration": map[string]interface{}{
+                                        "after": map[string]interface{}{
+                                                "password": map[string]interface{}{
+                                                        "hooks": []map[string]interface{}{
+                                                                {
+                                                                        "hook": "session",
+                                                                },
+                                                        },
+                                                },
+                                        },
+                                        "lifespan": "10m",
+                                        "ui_url":   selfService.RegistrationURL(),
+                                },
+                                "settings": map[string]interface{}{
+                                        "privileged_session_max_age": "15m",
+                                        "ui_url":                     selfService.SettingsURL(),
+                                },
+                                "verification": map[string]interface{}{
+                                        "after": map[string]interface{}{
+                                                "default_browser_return_url": selfService.LoginURL(),
+                                        },
+                                        "enabled": true,
+                                        "ui_url":  selfService.VerificationURL(),
+                                },
+                        },
+                },
+        }
+}
+
+const kratosTestIdentity = `{
+        "$id": "identity:test/regular",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "TestIdentity",
+    "type": "object",
+    "properties": {
+      "traits": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "E-Mail",
+            "minLength": 3,
+            "ory.sh/kratos": {
+              "credentials": {
+                "password": {
+                  "identifier": true
+                }
+              },
+              "verification": {
+                "via": "email"
+              },
+              "recovery": {
+                "via": "email"
+              }
+            }
+                  },
+                  "firstName": {
+                        "type": "string"
+                  },
+                  "lastName": {
+                        "type": "string"
+                  }
+        },
+        "required": [
+                  "email",
+                  "firstName",
+                  "lastName"
+        ],
+        "additionalProperties": false
+      }
+    }
+}`
+
+// TestSelfServiceConfiguration defines a test Kratos selfservice handler.
+type TestSelfServiceConfiguration interface {
+        // URLs
+        BasePublicURL() string
+        DefaultBrowserReturnURL() string
+        ErrorURL() string
+        LoginURL() string
+        RecoveryURL() string
+        RegistrationURL() string
+        SettingsURL() string
+        VerificationURL() string
+        WhitelistedReturnURLs() []string
+}
+
+// TestSelfService is the test default self service server.
+type TestSelfService interface {
+        TestSelfServiceConfiguration
+        // Closes any resources allocated by this server.
+        Close()
+        ServeHTTP(w http.ResponseWriter, r *http.Request)
+
+        //
+        InitBrowserRegistration() error
+        // Handlers:
+        SetDefaultHandler(func(http.ResponseWriter, *http.Request)) TestSelfService
+        SetErrorHandler(func(http.ResponseWriter, *http.Request)) TestSelfService
+        SetLoginHandler(func(http.ResponseWriter, *http.Request)) TestSelfService
+        SetRecoveryHandler(func(http.ResponseWriter, *http.Request)) TestSelfService
+        SetRegistrationHandler(func(http.ResponseWriter, *http.Request)) TestSelfService
+        SetSettingsHandler(func(http.ResponseWriter, *http.Request)) TestSelfService
+        SetVerificationHandler(func(http.ResponseWriter, *http.Request)) TestSelfService
+        // Other setters:
+        SetKratosTestEnvCtx(TestEnvContext) TestSelfService
+}
+
+type defaultKratosTestSelfService struct {
+        testContext *testing.T
+        testServer  *httptest.Server
+        httpClient  *http.Client
+
+        kratosCtx TestEnvContext
+
+        defaultHandlerFunc      func(http.ResponseWriter, *http.Request)
+        errorHandlerFunc        func(http.ResponseWriter, *http.Request)
+        loginHandlerFunc        func(http.ResponseWriter, *http.Request)
+        recoveryHandlerFunc     func(http.ResponseWriter, *http.Request)
+        registrationHandlerFunc func(http.ResponseWriter, *http.Request)
+        settingsHandlerFunc     func(http.ResponseWriter, *http.Request)
+        verificationHandlerFunc func(http.ResponseWriter, *http.Request)
+}
+
+// DefaultKratosTestSelfService returns an instance of the default self service provider.
+func DefaultKratosTestSelfService(t *testing.T) TestSelfService <span class="cov1" title="1">{
+
+        jar, _ := cookiejar.New(&amp;cookiejar.Options{})
+        httpClient := &amp;http.Client{
+                Jar: jar,
+        }
+
+        service := &amp;defaultKratosTestSelfService{httpClient: httpClient, testContext: t}
+        service.testServer = httptest.NewServer(service)
+        service.testContext.Log("Kratos self service bound on", service.testServer.URL)
+        return service
+}</span>
+
+func (h *defaultKratosTestSelfService) Close() <span class="cov1" title="1">{
+        h.testServer.Close()
+}</span>
+
+func (h *defaultKratosTestSelfService) InitBrowserRegistration() error <span class="cov0" title="0">{
+        return h.kratosCtx.ClientPublic().InitializeSelfServiceRegistrationViaBrowserFlow(
+                kratosPublic.NewInitializeSelfServiceRegistrationViaBrowserFlowParams().
+                        WithHTTPClient(h.httpClient))
+}</span>
+
+func (h *defaultKratosTestSelfService) ServeHTTP(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        switch r.URL.Path </span>{
+        case "/":<span class="cov0" title="0">
+                if h.defaultHandlerFunc != nil </span><span class="cov0" title="0">{
+                        h.defaultHandlerFunc(w, r)
+                }</span> else<span class="cov0" title="0"> {
+                        h.testContext.Log("DefaultKratosTestSelfService: default handler triggered")
+                        fmt.Fprint(w, "ok")
+                }</span>
+        case "/app/error":<span class="cov0" title="0">
+                if h.errorHandlerFunc != nil </span><span class="cov0" title="0">{
+                        h.errorHandlerFunc(w, r)
+                }</span> else<span class="cov0" title="0"> {
+                        h.testContext.Log("DefaultKratosTestSelfService: error handler triggered")
+                        fmt.Fprint(w, "ok")
+                }</span>
+        case "/app/login":<span class="cov0" title="0">
+                if h.loginHandlerFunc != nil </span><span class="cov0" title="0">{
+                        h.loginHandlerFunc(w, r)
+                }</span> else<span class="cov0" title="0"> {
+                        h.testContext.Log("DefaultKratosTestSelfService: login handler triggered")
+                        fmt.Fprint(w, "ok")
+                }</span>
+        case "/app/recovery":<span class="cov0" title="0">
+                if h.recoveryHandlerFunc != nil </span><span class="cov0" title="0">{
+                        h.recoveryHandlerFunc(w, r)
+                }</span> else<span class="cov0" title="0"> {
+                        h.testContext.Log("DefaultKratosTestSelfService: recovery handler triggered")
+                        fmt.Fprint(w, "ok")
+                }</span>
+        case "/app/registration":<span class="cov0" title="0">
+                if h.registrationHandlerFunc != nil </span><span class="cov0" title="0">{
+                        h.registrationHandlerFunc(w, r)
+                }</span> else<span class="cov0" title="0"> {
+                        h.testContext.Log("DefaultKratosTestSelfService: registration handler triggered")
+                        _, err := h.kratosCtx.ClientPublic().GetSelfServiceRegistrationFlow(kratosPublic.
+                                NewGetSelfServiceRegistrationFlowParams().
+                                WithHTTPClient(h.httpClient).
+                                WithID(r.URL.Query().Get("flow")))
+                        if err != nil </span><span class="cov0" title="0">{
+                                h.testContext.Error(err)
+                        }</span>
+                }
+        case "/app/settings":<span class="cov0" title="0">
+                if h.settingsHandlerFunc != nil </span><span class="cov0" title="0">{
+                        h.settingsHandlerFunc(w, r)
+                }</span> else<span class="cov0" title="0"> {
+                        h.testContext.Log("DefaultKratosTestSelfService: settings handler triggered")
+                        fmt.Fprint(w, "ok")
+                }</span>
+        case "/app/verification":<span class="cov0" title="0">
+                if h.verificationHandlerFunc != nil </span><span class="cov0" title="0">{
+                        h.loginHandlerFunc(w, r)
+                }</span> else<span class="cov0" title="0"> {
+                        h.testContext.Log("DefaultKratosTestSelfService: verification handler triggered")
+                        fmt.Fprint(w, "ok")
+                }</span>
+        }
+}
+
+func (h *defaultKratosTestSelfService) SetKratosTestEnvCtx(ctx TestEnvContext) TestSelfService <span class="cov0" title="0">{
+        h.kratosCtx = ctx
+        return h
+}</span>
+
+func (h *defaultKratosTestSelfService) BasePublicURL() string <span class="cov1" title="1">{
+        return ""
+}</span>
+func (h *defaultKratosTestSelfService) DefaultBrowserReturnURL() string <span class="cov1" title="1">{
+        return fmt.Sprintf("%s/", h.testServer.URL)
+}</span>
+func (h *defaultKratosTestSelfService) ErrorURL() string <span class="cov1" title="1">{
+        return fmt.Sprintf("%s/app/error", h.testServer.URL)
+}</span>
+func (h *defaultKratosTestSelfService) LoginURL() string <span class="cov6" title="4">{
+        return fmt.Sprintf("%s/app/login", h.testServer.URL)
+}</span>
+func (h *defaultKratosTestSelfService) RecoveryURL() string <span class="cov1" title="1">{
+        return fmt.Sprintf("%s/app/recovery", h.testServer.URL)
+}</span>
+func (h *defaultKratosTestSelfService) RegistrationURL() string <span class="cov1" title="1">{
+        return fmt.Sprintf("%s/app/registration", h.testServer.URL)
+}</span>
+func (h *defaultKratosTestSelfService) SettingsURL() string <span class="cov1" title="1">{
+        return fmt.Sprintf("%s/app/settings", h.testServer.URL)
+}</span>
+func (h *defaultKratosTestSelfService) VerificationURL() string <span class="cov1" title="1">{
+        return fmt.Sprintf("%s/app/verification", h.testServer.URL)
+}</span>
+func (h *defaultKratosTestSelfService) WhitelistedReturnURLs() []string <span class="cov1" title="1">{
+        return []string{h.testServer.URL}
+}</span>
+
+func (h *defaultKratosTestSelfService) SetDefaultHandler(handler func(http.ResponseWriter, *http.Request)) TestSelfService <span class="cov0" title="0">{
+        h.defaultHandlerFunc = handler
+        return h
+}</span>
+func (h *defaultKratosTestSelfService) SetErrorHandler(handler func(http.ResponseWriter, *http.Request)) TestSelfService <span class="cov0" title="0">{
+        h.errorHandlerFunc = handler
+        return h
+}</span>
+func (h *defaultKratosTestSelfService) SetLoginHandler(handler func(http.ResponseWriter, *http.Request)) TestSelfService <span class="cov0" title="0">{
+        h.loginHandlerFunc = handler
+        return h
+}</span>
+func (h *defaultKratosTestSelfService) SetRecoveryHandler(handler func(http.ResponseWriter, *http.Request)) TestSelfService <span class="cov0" title="0">{
+        h.recoveryHandlerFunc = handler
+        return h
+}</span>
+func (h *defaultKratosTestSelfService) SetRegistrationHandler(handler func(http.ResponseWriter, *http.Request)) TestSelfService <span class="cov0" title="0">{
+        h.registrationHandlerFunc = handler
+        return h
+}</span>
+func (h *defaultKratosTestSelfService) SetSettingsHandler(handler func(http.ResponseWriter, *http.Request)) TestSelfService <span class="cov0" title="0">{
+        h.settingsHandlerFunc = handler
+        return h
+}</span>
+func (h *defaultKratosTestSelfService) SetVerificationHandler(handler func(http.ResponseWriter, *http.Request)) TestSelfService <span class="cov0" title="0">{
+        h.verificationHandlerFunc = handler
+        return h
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package mailslurper
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "io/ioutil"
+        "net/http"
+        "os"
+        "regexp"
+        "strings"
+        "testing"
+        "time"
+
+        "github.com/ory/dockertest"
+        dc "github.com/ory/dockertest/docker"
+
+        "github.com/radekg/app-kit-orytest/common"
+)
+
+const (
+        // DefaultMailslurperImageName specifies the Mailslurper docker image name to use in tests.
+        DefaultMailslurperImageName = "oryd/mailslurper"
+        // DefaultMailslurperEnvVarImageName is the environment variable name for default Mailslurper docker image name.
+        DefaultMailslurperEnvVarImageName = "TEST_ORY_MAILSLURPER_IMAGE_NAME"
+        // DefaultMailslurperImageVersion specifies the Mailslurper docker image version to use in tests.
+        DefaultMailslurperImageVersion = "smtps-latest"
+        // DefaultMailslurperEnvVarImageVersion is the environment variable name for default Mailslurper docker image version.
+        DefaultMailslurperEnvVarImageVersion = "TEST_ORY_MAILSLURPER_IMAGE_VERSION"
+        // DefaultSubjectRecoverAccount is used when retrieving account recovery email
+        DefaultSubjectRecoverAccount = "Recover access to your account"
+        // DefaultSubjectVerifyAccount is used when retrieving account verification email
+        DefaultSubjectVerifyAccount = "Please verify your email address"
+)
+
+// TestEnvContext represents a test Mailslurper environment context.
+type TestEnvContext interface {
+        Cleanup()
+        ContainerIP() string
+        ContainerWWWPort() string
+        ContainerServicePort() string
+        ContainerSMTPPort() string
+
+        ExtractRecoveryLink(*MailItem) (string, error)
+        ExtractVerificationLink(*MailItem) (string, error)
+        ListEmail() (*Mail, error)
+        WaitForRecoveryEmail(context.Context, *testing.T, string) &lt;-chan interface{}
+        WaitForVerificationEmail(context.Context, *testing.T, string) &lt;-chan interface{}
+        WaitForEmailWithSubject(context.Context, *testing.T, string, string) &lt;-chan interface{}
+}
+
+// SetupTestMailslurper sets up Mailslurper environment for tests.
+// This environment can be passed to other Ory components in tests.
+func SetupTestMailslurper(t *testing.T) TestEnvContext <span class="cov1" title="1">{
+
+        cleanupContainers := true
+
+        // after every successful step, store a cleanup function here:
+        closables := []func(){}
+
+        // close all reasources in reverse order:
+        prependClosable := func(closable func(), closables []func()) []func() </span><span class="cov5" title="5">{
+                return append([]func(){closable}, closables...)
+        }</span>
+
+        // used in case of a failure during setup:
+        <span class="cov1" title="1">closeClosables := func(closables []func()) </span><span class="cov0" title="0">{
+                for _, closable := range closables </span><span class="cov0" title="0">{
+                        defer closable()
+                }</span>
+        }
+
+        // mailslurper ports:
+        <span class="cov1" title="1">mailslurperWWWListener, err := common.NewRandomPortSupplier()
+        if err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed creating mailslurper WWW random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing mailslurper WWW random port listener, if not closed yet")
+                mailslurperWWWListener.Cleanup()
+        }</span>, closables)
+
+        <span class="cov1" title="1">mailslurperServiceListener, err := common.NewRandomPortSupplier()
+        if err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed creating mailslurper service random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing mailslurper service random port listener, if not closed yet")
+                mailslurperServiceListener.Cleanup()
+        }</span>, closables)
+
+        <span class="cov1" title="1">mailslurperSMTPListener, err := common.NewRandomPortSupplier()
+        if err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed creating mailslurper SMTP random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing mailslurper SMTP random port listener, if not closed yet")
+                mailslurperSMTPListener.Cleanup()
+        }</span>, closables)
+
+        <span class="cov1" title="1">if err := mailslurperWWWListener.Discover(); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed extracting host and port from mailslurper WWW random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">if err := mailslurperServiceListener.Discover(); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed extracting host and port from mailslurper service random port listener: '%v'", err)
+        }</span>
+        <span class="cov1" title="1">if err := mailslurperSMTPListener.Discover(); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed extracting host and port from mailslurper SMTP random port listener: '%v'", err)
+        }</span>
+
+        <span class="cov1" title="1">fetchedMailslurperWWWRandomPort, _ := mailslurperWWWListener.DiscoveredPort()
+        fetchedMailslurperServiceRandomPort, _ := mailslurperServiceListener.DiscoveredPort()
+        fetchedMailslurperSMTPRandomPort, _ := mailslurperSMTPListener.DiscoveredPort()
+
+        // create new pool using the default Docker endpoint:
+        pool, poolErr := dockertest.NewPool("")
+        if poolErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected docker pool to come up but received: '%v'", poolErr)
+        }</span>
+
+        // create mailslurper config:
+        <span class="cov1" title="1">mailslurperConfig, tempFileErr := ioutil.TempFile("", "mailslurper-config")
+        if tempFileErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected temp mailslurper config file to be created but received an error: '%v'", tempFileErr)
+        }</span>
+
+        <span class="cov1" title="1">mailslurperJSONConfig := mailslurperConfigFunc(fetchedMailslurperWWWRandomPort, fetchedMailslurperServiceRandomPort, fetchedMailslurperSMTPRandomPort)
+        if writeErr := ioutil.WriteFile(mailslurperConfig.Name(), []byte(mailslurperJSONConfig), 0777); writeErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected temp mailslurper configuration file to be written but received an error: '%v'", writeErr)
+        }</span>
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: removing mailslurper configuration")
+                os.Remove(mailslurperConfig.Name())
+        }</span>, closables)
+
+        <span class="cov1" title="1">t.Log("Mailslurper configuration written...", mailslurperConfig.Name())
+
+        // start mailslurper:
+        mailslurperOptions := &amp;dockertest.RunOptions{
+                Repository: common.GetEnvOrDefault(DefaultMailslurperEnvVarImageName, DefaultMailslurperImageName),
+                Tag:        common.GetEnvOrDefault(DefaultMailslurperEnvVarImageVersion, DefaultMailslurperImageVersion),
+                ExposedPorts: []string{
+                        fmt.Sprintf("%s/tcp", fetchedMailslurperWWWRandomPort),
+                        fmt.Sprintf("%s/tcp", fetchedMailslurperServiceRandomPort),
+                        fmt.Sprintf("%s/tcp", fetchedMailslurperSMTPRandomPort)},
+                PortBindings: map[dc.Port][]dc.PortBinding{
+                        dc.Port(fmt.Sprintf("%s/tcp", fetchedMailslurperWWWRandomPort)):     {{HostIP: "0.0.0.0", HostPort: fetchedMailslurperWWWRandomPort}},
+                        dc.Port(fmt.Sprintf("%s/tcp", fetchedMailslurperServiceRandomPort)): {{HostIP: "0.0.0.0", HostPort: fetchedMailslurperServiceRandomPort}},
+                        dc.Port(fmt.Sprintf("%s/tcp", fetchedMailslurperSMTPRandomPort)):    {{HostIP: "0.0.0.0", HostPort: fetchedMailslurperSMTPRandomPort}},
+                },
+                Mounts: []string{
+                        fmt.Sprintf("%s:/go/src/github.com/mailslurper/mailslurper/cmd/mailslurper/config.json", mailslurperConfig.Name()),
+                },
+        }
+
+        // make sure the random mailslurper ports are free before we request the container to start:
+        mailslurperWWWListener.Cleanup()
+        mailslurperServiceListener.Cleanup()
+        mailslurperSMTPListener.Cleanup()
+
+        mailslurper, kratosErr := pool.RunWithOptions(mailslurperOptions, func(config *dc.HostConfig) </span>{<span class="cov1" title="1">}</span>)
+        <span class="cov1" title="1">if kratosErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected mailslurper to start but received: '%v'", kratosErr)
+        }</span>
+
+        <span class="cov1" title="1">closables = prependClosable(func() </span><span class="cov1" title="1">{
+                t.Log("cleanup: closing mailslurper")
+                if cleanupContainers </span><span class="cov1" title="1">{
+                        mailslurper.Close()
+                        pool.Purge(mailslurper)
+                }</span>
+        }, closables)
+
+        <span class="cov1" title="1">mailslurperIPAddress := ""
+        containers, _ := pool.Client.ListContainers(dc.ListContainersOptions{All: true})
+        for _, container := range containers </span><span class="cov10" title="23">{
+                if container.ID == mailslurper.Container.ID </span><span class="cov1" title="1">{
+                        for _, network := range container.Networks.Networks </span><span class="cov1" title="1">{
+                                mailslurperIPAddress = network.IPAddress
+                        }</span>
+                }
+        }
+
+        <span class="cov1" title="1">return &amp;testMailslurperContext{
+                CleanupValue: func() </span><span class="cov1" title="1">{
+                        for _, closable := range closables </span><span class="cov5" title="5">{
+                                closable()
+                        }</span>
+                },
+                ContainerIPValue:          mailslurperIPAddress,
+                ContainerWWWPortValue:     fetchedMailslurperWWWRandomPort,
+                ContainerServicePortValue: fetchedMailslurperServiceRandomPort,
+                ContainerSMTPPortValue:    fetchedMailslurperSMTPRandomPort,
+        }
+
+}
+
+type testMailslurperContext struct {
+        CleanupValue              func()
+        ContainerIPValue          string
+        ContainerWWWPortValue     string
+        ContainerServicePortValue string
+        ContainerSMTPPortValue    string
+}
+
+func (ctx *testMailslurperContext) Cleanup() <span class="cov1" title="1">{
+        ctx.CleanupValue()
+}</span>
+func (ctx *testMailslurperContext) ContainerIP() string <span class="cov1" title="1">{
+        return ctx.ContainerIPValue
+}</span>
+func (ctx *testMailslurperContext) ContainerWWWPort() string <span class="cov0" title="0">{
+        return ctx.ContainerWWWPortValue
+}</span>
+func (ctx *testMailslurperContext) ContainerServicePort() string <span class="cov0" title="0">{
+        return ctx.ContainerServicePortValue
+}</span>
+func (ctx *testMailslurperContext) ContainerSMTPPort() string <span class="cov1" title="1">{
+        return ctx.ContainerSMTPPortValue
+}</span>
+
+func (ctx *testMailslurperContext) ExtractRecoveryLink(mailItem *MailItem) (string, error) <span class="cov0" title="0">{
+        // this is the email message we've been waiting for:
+        re := regexp.MustCompile("\\&lt;a.*\\&gt;(.*)\\&lt;\\/a\\&gt;")
+        match := re.FindStringSubmatch(mailItem.Body)
+        if len(match) == 0 </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("recovery email received but recovery link could not be extracted, body: '%s'", mailItem.Body)
+        }</span>
+        <span class="cov0" title="0">return match[1], nil</span>
+}
+
+func (ctx *testMailslurperContext) ExtractVerificationLink(mailItem *MailItem) (string, error) <span class="cov0" title="0">{
+        // this is the email message we've been waiting for:
+        re := regexp.MustCompile("\\&lt;a.*\\&gt;(.*)\\&lt;\\/a\\&gt;")
+        match := re.FindStringSubmatch(mailItem.Body)
+        if len(match) == 0 </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("verification email received but verification link could not be extracted, body: '%s'", mailItem.Body)
+        }</span>
+        <span class="cov0" title="0">return match[1], nil</span>
+}
+
+func (ctx *testMailslurperContext) ListEmail() (*Mail, error) <span class="cov2" title="2">{
+        httpClient := &amp;http.Client{}
+        response, err := httpClient.Get(fmt.Sprintf("http://localhost:%s/mail?pageNumber=1", ctx.ContainerServicePortValue))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov2" title="2">defer response.Body.Close()
+        mail := &amp;Mail{}
+        return mail, json.NewDecoder(response.Body).Decode(mail)</span>
+}
+
+func (ctx *testMailslurperContext) WaitForRecoveryEmail(c context.Context, t *testing.T, recipient string) &lt;-chan interface{} <span class="cov0" title="0">{
+        return ctx.WaitForEmailWithSubject(c, t, recipient, DefaultSubjectRecoverAccount)
+}</span>
+
+func (ctx *testMailslurperContext) WaitForVerificationEmail(c context.Context, t *testing.T, recipient string) &lt;-chan interface{} <span class="cov0" title="0">{
+        return ctx.WaitForEmailWithSubject(c, t, recipient, DefaultSubjectVerifyAccount)
+}</span>
+
+func (ctx *testMailslurperContext) WaitForEmailWithSubject(c context.Context, t *testing.T, recipient, subject string) &lt;-chan interface{} <span class="cov0" title="0">{
+        callCtx, cancelFunc := context.WithDeadline(c, time.Now().Add(time.Second*10))
+
+        respChan := make(chan interface{}, 1)
+
+        go func() </span><span class="cov0" title="0">{
+                defer close(respChan)
+                for </span><span class="cov0" title="0">{
+                        if err := callCtx.Err(); err != nil </span><span class="cov0" title="0">{
+                                if err.Error() == context.Canceled.Error() </span><span class="cov0" title="0">{
+                                        return // message has been delivered
+                                }</span>
+                                <span class="cov0" title="0">respChan &lt;- err
+                                return</span>
+                        }
+                        <span class="cov0" title="0">mail, err := ctx.ListEmail()
+                        if err != nil </span><span class="cov0" title="0">{
+                                cancelFunc()
+                                respChan &lt;- fmt.Errorf("expected mail but received an error: '%v'", err)
+                                return
+                        }</span>
+                        <span class="cov0" title="0">if mail.TotalRecords == 0 </span><span class="cov0" title="0">{
+                                time.Sleep(time.Second)
+                        }</span> else<span class="cov0" title="0"> {
+                                for _, mailItem := range mail.MailItems </span><span class="cov0" title="0">{
+                                        if strings.TrimSpace(mailItem.Subject) == strings.TrimSpace(subject) &amp;&amp; common.StringSlicesEqual(t, mailItem.ToAddresses, []string{recipient}) </span><span class="cov0" title="0">{
+                                                cancelFunc()
+                                                respChan &lt;- mailItem
+                                                return
+                                        }</span>
+                                }
+                        }
+                }
+
+        }()
+
+        <span class="cov0" title="0">return respChan</span>
+}
+
+func mailslurperConfigFunc(wwwPort, servicePort, smtpPort string) string <span class="cov1" title="1">{
+        return fmt.Sprintf(`{
+                "wwwAddress": "0.0.0.0",
+                "wwwPort": %s,
+                "serviceAddress": "0.0.0.0",
+                "servicePort": %s,
+                "smtpAddress": "0.0.0.0",
+                "smtpPort": %s,
+                "dbEngine": "SQLite",
+                "dbHost": "",
+                "dbPort": 0,
+                "dbDatabase": "mailslurper.db",
+                "dbUserName": "",
+                "dbPassword": "",
+                "maxWorkers": 1000,
+                "autoStartBrowser": false,
+                "keyFile": "mailslurper-key.pem",
+                "certFile": "mailslurper-cert.pem",
+                "adminKeyFile": "",
+                "adminCertFile": ""
+        }`, wwwPort, servicePort, smtpPort)
+}</span>
+
+// Mail represents mailslurper messages.
+type Mail struct {
+        MailItems    []*MailItem `json:"mailItems"`
+        TotalPages   int         `json:"totalPages"`
+        TotalRecords int         `json:"totalRecords"`
+}
+
+// MailItem represents a single mailslurper message.
+type MailItem struct {
+        ID                string        `json:"id"`
+        DateSent          string        `json:"dateSent"`
+        FromAddress       string        `json:"fromAddress"`
+        ToAddresses       []string      `json:"toAddresses"`
+        Subject           string        `json:"subject"`
+        XMailer           string        `json:"xmailer"`
+        MIMEVersion       string        `json:"mimeVersion"`
+        Body              string        `json:"body"`
+        ContentType       string        `json:"contentType"`
+        Boundary          string        `json:"boundary"`
+        Attachments       []interface{} `json:"attachments"`
+        TransferEncoding  string        `json:"transferEncoding"`
+        Message           interface{}   `json:"Message,omitempty"`
+        InlineAttachments interface{}   `json:"InlineAttachments,omitempty"`
+        TextBody          string        `json:"TextBody"`
+        HTMLBody          string        `json:"HTMLBody"`
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package postgres
+
+import (
+        "database/sql"
+        "fmt"
+        "testing"
+        "time"
+
+        "github.com/ory/dockertest"
+        dc "github.com/ory/dockertest/docker"
+
+        // Posgres library:
+        _ "github.com/lib/pq"
+
+        "github.com/radekg/app-kit-orytest/common"
+)
+
+const (
+        // DefaultPostgresImageName specifies the Postgres docker image name to use in tests.
+        DefaultPostgresImageName = "postgres"
+        // DefaultPostgresEnvVarImageName is the environment variable name for default Postgres docker image name.
+        DefaultPostgresEnvVarImageName = "TEST_POSTGRES_IMAGE_NAME"
+        // DefaultPostgresImageVersion specifies the Postgres docker image version to use in tests.
+        DefaultPostgresImageVersion = "9.6.17"
+        // DefaultPostgresEnvVarImageVersion is the environment variable name for default Postgres docker image version.
+        DefaultPostgresEnvVarImageVersion = "TEST_POSTGRES_IMAGE_VERSION"
+)
+
+// TestEnvContext represents a test Postgres environment context.
+type TestEnvContext interface {
+        Cleanup()
+        ContainerIP() string
+        ContainerPrivatePort() string
+        ContainerPublicPort() string
+        PostgresDatabase() string
+        PostgresPass() string
+        PostgresUser() string
+}
+
+// SetupTestPostgres sets up Postgres environment for tests.
+// This environment can be passed to other Ory components in tests.
+func SetupTestPostgres(t *testing.T) TestEnvContext <span class="cov3" title="3">{
+
+        // after every successful step, store a cleanup function here:
+        closables := []func(){}
+
+        postgresUser := "test"
+        postgresPass := "test"
+        postgresDb := "test"
+        postgresPort := "5432"
+
+        // used in case of a failure during setup:
+        closeClosables := func(closables []func()) </span><span class="cov0" title="0">{
+                for _, closable := range closables </span><span class="cov0" title="0">{
+                        defer closable()
+                }</span>
+        }
+
+        // close all reasources in reverse order:
+        <span class="cov3" title="3">prependClosable := func(closable func(), closables []func()) []func() </span><span class="cov4" title="6">{
+                return append([]func(){closable}, closables...)
+        }</span>
+
+        // Using Postgres for Kratos migrations
+
+        <span class="cov3" title="3">postgresListener, err := common.NewRandomPortSupplier()
+        if err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed creating postgres random port listener: '%v'", err)
+        }</span>
+        <span class="cov3" title="3">closables = prependClosable(func() </span><span class="cov3" title="3">{
+                t.Log("cleanup: closing postgres random port listener, if not closed yet")
+                postgresListener.Cleanup()
+        }</span>, closables)
+
+        <span class="cov3" title="3">if err := postgresListener.Discover(); err != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("failed extracting host and port from postgres random port listener: '%v'", err)
+        }</span>
+
+        <span class="cov3" title="3">fetchedPostgresRandomPort, _ := postgresListener.DiscoveredPort()
+
+        postgresOptions := &amp;dockertest.RunOptions{
+                Repository: common.GetEnvOrDefault(DefaultPostgresEnvVarImageName, DefaultPostgresImageName),
+                Tag:        common.GetEnvOrDefault(DefaultPostgresEnvVarImageVersion, DefaultPostgresImageVersion),
+                Env: []string{
+                        fmt.Sprintf("POSTGRES_USER=%s", postgresUser),
+                        fmt.Sprintf("POSTGRES_PASSWORD=%s", postgresPass),
+                        fmt.Sprintf("POSTGRES_DB=%s", postgresDb),
+                },
+                ExposedPorts: []string{
+                        fmt.Sprintf("%s/tcp", postgresPort)},
+                PortBindings: map[dc.Port][]dc.PortBinding{
+                        dc.Port(fmt.Sprintf("%s/tcp", postgresPort)): {{HostIP: "0.0.0.0", HostPort: fetchedPostgresRandomPort}}},
+        }
+
+        // make sure the random postgres port is free before we request the container to start:
+        postgresListener.Cleanup()
+
+        // create new pool using the default Docker endpoint:
+        pool, poolErr := dockertest.NewPool("")
+        if poolErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected docker pool to come up but received: '%v'", poolErr)
+        }</span>
+
+        // start postgres:
+        <span class="cov3" title="3">postgres, postgresErr := pool.RunWithOptions(postgresOptions, func(config *dc.HostConfig) </span>{<span class="cov3" title="3">}</span>)
+        <span class="cov3" title="3">if postgresErr != nil </span><span class="cov0" title="0">{
+                closeClosables(closables)
+                t.Fatalf("expected postgres to start but received: '%v'", postgresErr)
+        }</span>
+
+        <span class="cov3" title="3">closables = prependClosable(func() </span><span class="cov3" title="3">{
+                t.Log("cleanup: closing postgres")
+                postgres.Close()
+                pool.Purge(postgres)
+        }</span>, closables)
+
+        // wait until we can connect to postgres:
+        <span class="cov3" title="3">for </span><span class="cov3" title="3">{
+                db, sqlOpenErr := sql.Open("postgres", fmt.Sprintf("host=localhost port=%s user=%s password=%s dbname=%s sslmode=disable",
+                        fetchedPostgresRandomPort, postgresUser, postgresPass, postgresDb))
+                if sqlOpenErr == nil </span><span class="cov3" title="3">{
+                        t.Log("connected to postgres")
+                        db.Close()
+                        break</span>
+                }
+                <span class="cov0" title="0">t.Log("Still waiting for postgres...")
+                &lt;-time.After(time.Second)</span>
+        }
+
+        <span class="cov3" title="3">postgresIPAddress := ""
+        containers, _ := pool.Client.ListContainers(dc.ListContainersOptions{All: true})
+        for _, container := range containers </span><span class="cov10" title="73">{
+                if container.ID == postgres.Container.ID </span><span class="cov3" title="3">{
+                        for _, network := range container.Networks.Networks </span><span class="cov3" title="3">{
+                                postgresIPAddress = network.IPAddress
+                        }</span>
+                }
+        }
+
+        <span class="cov3" title="3">return &amp;testPostgresContext{
+                CleanupFuncValue: func() </span><span class="cov3" title="3">{
+                        for _, closable := range closables </span><span class="cov4" title="6">{
+                                closable()
+                        }</span>
+                },
+                ContainerIPValue:          postgresIPAddress,
+                ContainerPrivatePortValue: postgresPort,
+                ContainerPublicPortValue:  fetchedPostgresRandomPort,
+                PostgresDatabaseValue:     postgresDb,
+                PostgresPassValue:         postgresPass,
+                PostgresUserValue:         postgresUser,
+        }
+
+}
+
+type testPostgresContext struct {
+        CleanupFuncValue          func()
+        ContainerIPValue          string
+        ContainerPrivatePortValue string
+        ContainerPublicPortValue  string
+        PostgresDatabaseValue     string
+        PostgresPassValue         string
+        PostgresUserValue         string
+}
+
+func (ctx *testPostgresContext) Cleanup() <span class="cov3" title="3">{
+        ctx.CleanupFuncValue()
+}</span>
+
+func (ctx *testPostgresContext) ContainerIP() string <span class="cov4" title="6">{
+        return ctx.ContainerIPValue
+}</span>
+func (ctx *testPostgresContext) ContainerPrivatePort() string <span class="cov4" title="6">{
+        return ctx.ContainerPrivatePortValue
+}</span>
+func (ctx *testPostgresContext) ContainerPublicPort() string <span class="cov0" title="0">{
+        return ctx.ContainerPublicPortValue
+}</span>
+func (ctx *testPostgresContext) PostgresDatabase() string <span class="cov4" title="6">{
+        return ctx.PostgresDatabaseValue
+}</span>
+func (ctx *testPostgresContext) PostgresPass() string <span class="cov4" title="6">{
+        return ctx.PostgresPassValue
+}</span>
+func (ctx *testPostgresContext) PostgresUser() string <span class="cov4" title="6">{
+        return ctx.PostgresUserValue
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

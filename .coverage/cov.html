@@ -207,12 +207,12 @@ func WaitForContainerExit0(t *testing.T, pool *dockertest.Pool, containerID stri
         chanError := make(chan error, 1)
 
         go func() </span><span class="cov3" title="3">{
-                poolRetryErr := pool.Retry(func() error </span><span class="cov6" title="15">{
+                poolRetryErr := pool.Retry(func() error </span><span class="cov7" title="16">{
                         containers, _ := pool.Client.ListContainers(dc.ListContainersOptions{All: true})
-                        for _, container := range containers </span><span class="cov10" title="70">{
-                                if container.ID == containerID </span><span class="cov6" title="15">{
+                        for _, container := range containers </span><span class="cov10" title="62">{
+                                if container.ID == containerID </span><span class="cov7" title="16">{
                                         time.Sleep(time.Millisecond * 50)
-                                        if container.State == "running" </span><span class="cov5" title="10">{
+                                        if container.State == "running" </span><span class="cov6" title="11">{
                                                 return errors.New("still running")
                                         }</span>
                                         <span class="cov4" title="5">if container.State == "restarting" </span><span class="cov2" title="2">{
@@ -1828,7 +1828,7 @@ func SetupTestMailslurper(t *testing.T) TestEnvContext <span class="cov1" title=
         closables := []func(){}
 
         // close all reasources in reverse order:
-        prependClosable := func(closable func(), closables []func()) []func() </span><span class="cov5" title="5">{
+        prependClosable := func(closable func(), closables []func()) []func() </span><span class="cov6" title="5">{
                 return append([]func(){closable}, closables...)
         }</span>
 
@@ -1952,7 +1952,7 @@ func SetupTestMailslurper(t *testing.T) TestEnvContext <span class="cov1" title=
 
         <span class="cov1" title="1">mailslurperIPAddress := ""
         containers, _ := pool.Client.ListContainers(dc.ListContainersOptions{All: true})
-        for _, container := range containers </span><span class="cov10" title="23">{
+        for _, container := range containers </span><span class="cov10" title="16">{
                 if container.ID == mailslurper.Container.ID </span><span class="cov1" title="1">{
                         for _, network := range container.Networks.Networks </span><span class="cov1" title="1">{
                                 mailslurperIPAddress = network.IPAddress
@@ -1962,7 +1962,7 @@ func SetupTestMailslurper(t *testing.T) TestEnvContext <span class="cov1" title=
 
         <span class="cov1" title="1">return &amp;testMailslurperContext{
                 CleanupValue: func() </span><span class="cov1" title="1">{
-                        for _, closable := range closables </span><span class="cov5" title="5">{
+                        for _, closable := range closables </span><span class="cov6" title="5">{
                                 closable()
                         }</span>
                 },
@@ -2018,13 +2018,13 @@ func (ctx *testMailslurperContext) ExtractVerificationLink(mailItem *MailItem) (
         <span class="cov0" title="0">return match[1], nil</span>
 }
 
-func (ctx *testMailslurperContext) ListEmail() (*Mail, error) <span class="cov2" title="2">{
+func (ctx *testMailslurperContext) ListEmail() (*Mail, error) <span class="cov3" title="2">{
         httpClient := &amp;http.Client{}
         response, err := httpClient.Get(fmt.Sprintf("http://localhost:%s/mail?pageNumber=1", ctx.ContainerServicePortValue))
         if err != nil </span><span class="cov0" title="0">{
                 return nil, err
         }</span>
-        <span class="cov2" title="2">defer response.Body.Close()
+        <span class="cov3" title="2">defer response.Body.Close()
         mail := &amp;Mail{}
         return mail, json.NewDecoder(response.Body).Decode(mail)</span>
 }
@@ -2186,7 +2186,7 @@ func SetupTestPostgres(t *testing.T) TestEnvContext <span class="cov3" title="3"
         }
 
         // close all reasources in reverse order:
-        <span class="cov3" title="3">prependClosable := func(closable func(), closables []func()) []func() </span><span class="cov4" title="6">{
+        <span class="cov3" title="3">prependClosable := func(closable func(), closables []func()) []func() </span><span class="cov5" title="6">{
                 return append([]func(){closable}, closables...)
         }</span>
 
@@ -2261,7 +2261,7 @@ func SetupTestPostgres(t *testing.T) TestEnvContext <span class="cov3" title="3"
 
         <span class="cov3" title="3">postgresIPAddress := ""
         containers, _ := pool.Client.ListContainers(dc.ListContainersOptions{All: true})
-        for _, container := range containers </span><span class="cov10" title="73">{
+        for _, container := range containers </span><span class="cov10" title="42">{
                 if container.ID == postgres.Container.ID </span><span class="cov3" title="3">{
                         for _, network := range container.Networks.Networks </span><span class="cov3" title="3">{
                                 postgresIPAddress = network.IPAddress
@@ -2271,7 +2271,7 @@ func SetupTestPostgres(t *testing.T) TestEnvContext <span class="cov3" title="3"
 
         <span class="cov3" title="3">return &amp;testPostgresContext{
                 CleanupFuncValue: func() </span><span class="cov3" title="3">{
-                        for _, closable := range closables </span><span class="cov4" title="6">{
+                        for _, closable := range closables </span><span class="cov5" title="6">{
                                 closable()
                         }</span>
                 },
@@ -2299,22 +2299,22 @@ func (ctx *testPostgresContext) Cleanup() <span class="cov3" title="3">{
         ctx.CleanupFuncValue()
 }</span>
 
-func (ctx *testPostgresContext) ContainerIP() string <span class="cov4" title="6">{
+func (ctx *testPostgresContext) ContainerIP() string <span class="cov5" title="6">{
         return ctx.ContainerIPValue
 }</span>
-func (ctx *testPostgresContext) ContainerPrivatePort() string <span class="cov4" title="6">{
+func (ctx *testPostgresContext) ContainerPrivatePort() string <span class="cov5" title="6">{
         return ctx.ContainerPrivatePortValue
 }</span>
 func (ctx *testPostgresContext) ContainerPublicPort() string <span class="cov0" title="0">{
         return ctx.ContainerPublicPortValue
 }</span>
-func (ctx *testPostgresContext) PostgresDatabase() string <span class="cov4" title="6">{
+func (ctx *testPostgresContext) PostgresDatabase() string <span class="cov5" title="6">{
         return ctx.PostgresDatabaseValue
 }</span>
-func (ctx *testPostgresContext) PostgresPass() string <span class="cov4" title="6">{
+func (ctx *testPostgresContext) PostgresPass() string <span class="cov5" title="6">{
         return ctx.PostgresPassValue
 }</span>
-func (ctx *testPostgresContext) PostgresUser() string <span class="cov4" title="6">{
+func (ctx *testPostgresContext) PostgresUser() string <span class="cov5" title="6">{
         return ctx.PostgresUserValue
 }</span>
 </pre>

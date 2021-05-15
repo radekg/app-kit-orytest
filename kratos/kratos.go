@@ -30,7 +30,7 @@ const (
 	// DefaultKratosEnvVarImageName is the environment variable name for default Kratos docker image name.
 	DefaultKratosEnvVarImageName = "TEST_ORY_KRATOS_IMAGE_NAME"
 	// DefaultKratosImageVersion specifies the Kratos docker image version to use in tests.
-	DefaultKratosImageVersion = "v0.5.5-alpha.1"
+	DefaultKratosImageVersion = "v0.6.2-alpha.1"
 	// DefaultKratosEnvVarImageVersion is the environment variable name for default Kratos docker image version.
 	DefaultKratosEnvVarImageVersion = "TEST_ORY_KRATOS_IMAGE_VERSION"
 )
@@ -238,8 +238,8 @@ func SetupTestKratos(t *testing.T,
 	closables = prependClosable(func() {
 		t.Log("cleanup: closing kratos")
 		if cleanupContainers {
-			kratos.Close()
-			pool.Purge(kratos)
+			//kratos.Close()
+			//pool.Purge(kratos)
 		}
 	}, closables)
 
@@ -382,12 +382,9 @@ func kratosTestConfigFunc(t *testing.T, adminPort, publicPort string,
 			"cookie": []string{"PLEASE-CHANGE-ME-I-AM-VERY-INSECURE"},
 		},
 		"hashers": map[string]interface{}{
-			"argon2": map[string]interface{}{
-				"parallelism": 1,
-				"memory":      131072,
-				"iterations":  2,
-				"salt_length": 16,
-				"key_length":  16,
+			"algorithm": "bcrypt",
+			"bcrypt": map[string]interface{}{
+				"cost": 10,
 			},
 		},
 		"identity": map[string]interface{}{

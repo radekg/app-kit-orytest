@@ -37,6 +37,8 @@ func TestKratosEmbeddedAPIRegistration(t *testing.T) {
 		t.Fatalf("expected kratos self-service registration API request to be executed but received an error: '%v'", err)
 	}
 
+	t.Log(" ================> ", okRes.Payload.Active)
+
 	method, ok := okRes.Payload.Methods["password"]
 	if !ok {
 		t.Fatal("Expected password method to be exist in methods but none found")
@@ -50,7 +52,7 @@ func TestKratosEmbeddedAPIRegistration(t *testing.T) {
 	registrationOkRes, err := kratosCtx.ClientPublic().
 		CompleteSelfServiceRegistrationFlowWithPasswordMethod(kratosPublic.
 			NewCompleteSelfServiceRegistrationFlowWithPasswordMethodParams().
-			WithFlow(common.StringP(string(okRes.Payload.ID))).
+			WithFlow(common.StringP(string(*okRes.Payload.ID))).
 			WithPayload(map[string]interface{}{
 				"password":         userPassword,
 				"traits.email":     userEmail,
@@ -66,7 +68,7 @@ func TestKratosEmbeddedAPIRegistration(t *testing.T) {
 	// the verifiable addresses must contain an email address with status pending:
 	hasPending := false
 	for _, address := range registrationOkRes.Payload.Identity.VerifiableAddresses {
-		if *address.Value == userEmail && string(address.Via) == "email" && string(address.Status) == "pending" {
+		if *address.Value == userEmail && string(*address.Via) == "email" && string(*address.Status) == "pending" {
 			hasPending = true
 			break
 		}
@@ -150,7 +152,7 @@ outsideValidateIdentity:
 	for _, identity := range listIdentitiesOkRes.Payload {
 		if identity.ID == createdIdentityID {
 			for _, address := range identity.VerifiableAddresses {
-				if *address.Value == userEmail && string(address.Via) == "email" && string(address.Status) == "completed" {
+				if *address.Value == userEmail && string(*address.Via) == "email" && string(*address.Status) == "completed" {
 					hasCompleted = true
 					break outsideValidateIdentity
 				}
@@ -184,7 +186,7 @@ outsideValidateIdentity:
 	loginCompleteOkRes, err := kratosCtx.ClientPublic().
 		CompleteSelfServiceLoginFlowWithPasswordMethod(kratosPublic.
 			NewCompleteSelfServiceLoginFlowWithPasswordMethodParams().
-			WithFlow(string(loginResponseOk.Payload.ID)).
+			WithFlow(string(*loginResponseOk.Payload.ID)).
 			WithBody(&kratosModels.CompleteSelfServiceLoginFlowWithPasswordMethod{
 				Identifier: userEmail,
 				Password:   userPassword,
@@ -209,7 +211,7 @@ outsideValidateIdentity:
 	_, loginErr := kratosCtx.ClientPublic().
 		CompleteSelfServiceLoginFlowWithPasswordMethod(kratosPublic.
 			NewCompleteSelfServiceLoginFlowWithPasswordMethodParams().
-			WithFlow(string(loginResponseOk.Payload.ID)).
+			WithFlow(string(*loginResponseOk.Payload.ID)).
 			WithBody(&kratosModels.CompleteSelfServiceLoginFlowWithPasswordMethod{
 				Identifier: userEmail,
 				Password:   userInvalidPassword,
@@ -248,7 +250,7 @@ outsideValidateIdentity:
 		CompleteSelfServiceSettingsFlowWithPasswordMethod(kratosPublic.
 			NewCompleteSelfServiceSettingsFlowWithPasswordMethodParams().
 			WithHTTPClient(loggedInClientWithHeader).
-			WithFlow(common.StringP(string(settingsInitFlowOk.Payload.ID))).
+			WithFlow(common.StringP(string(*settingsInitFlowOk.Payload.ID))).
 			WithBody(&kratosModels.CompleteSelfServiceSettingsFlowWithPasswordMethod{
 				Password: common.StringP(userInvalidPassword),
 			}), nil)
@@ -268,7 +270,7 @@ outsideValidateIdentity:
 	loginCompleteOkRes, err = kratosCtx.ClientPublic().
 		CompleteSelfServiceLoginFlowWithPasswordMethod(kratosPublic.
 			NewCompleteSelfServiceLoginFlowWithPasswordMethodParams().
-			WithFlow(string(loginResponseOk.Payload.ID)).
+			WithFlow(string(*loginResponseOk.Payload.ID)).
 			WithBody(&kratosModels.CompleteSelfServiceLoginFlowWithPasswordMethod{
 				Identifier: userEmail,
 				Password:   userInvalidPassword,

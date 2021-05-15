@@ -9,13 +9,14 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/containerd/continuity v0.0.0-20201208142359-180525291bb7 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/go-openapi/strfmt v0.20.1
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
 	github.com/lib/pq v1.9.0
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect
 	github.com/ory/dockertest v3.3.5+incompatible
-	github.com/ory/keto-client-go v0.6.0-alpha.1
-	github.com/ory/kratos-client-go v0.5.4-alpha.1
+	github.com/ory/keto-client-go v0.6.0-alpha.3
+	github.com/ory/kratos-client-go v0.6.2-alpha.1
 	github.com/radekg/app-kit-tokens v0.1.0
 	github.com/stretchr/testify v1.7.0
 	gopkg.in/yaml.v2 v2.4.0

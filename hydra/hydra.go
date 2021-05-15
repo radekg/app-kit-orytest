@@ -23,7 +23,7 @@ const (
 	// DefaultHydraEnvVarImageName is the environment variable name for default Hydra docker image name.
 	DefaultHydraEnvVarImageName = "TEST_ORY_HYDRA_IMAGE_NAME"
 	// DefaultHydraImageVersion specifies the Hydra docker image version to use in tests.
-	DefaultHydraImageVersion = "v1.10.1"
+	DefaultHydraImageVersion = "v1.10.2"
 	// DefaultHydraEnvVarImageVersion is the environment variable name for default Hydra docker image version.
 	DefaultHydraEnvVarImageVersion = "TEST_ORY_HYDRA_IMAGE_VERSION"
 )

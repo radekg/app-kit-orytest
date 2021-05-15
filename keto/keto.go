@@ -28,7 +28,7 @@ const (
 	// DefaultKetoEnvVarImageName is the environment variable name for default Keto docker image name.
 	DefaultKetoEnvVarImageName = "TEST_ORY_KETO_IMAGE_NAME"
 	// DefaultKetoImageVersion specifies the Keto docker image version to use in tests.
-	DefaultKetoImageVersion = "v0.6.0-alpha.1"
+	DefaultKetoImageVersion = "v0.6.0-alpha.3"
 	// DefaultKetoEnvVarImageVersion is the environment variable name for default Keto docker image version.
 	DefaultKetoEnvVarImageVersion = "TEST_ORY_KETO_IMAGE_VERSION"
 )

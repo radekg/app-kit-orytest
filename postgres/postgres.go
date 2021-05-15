@@ -21,7 +21,7 @@ const (
 	// DefaultPostgresEnvVarImageName is the environment variable name for default Postgres docker image name.
 	DefaultPostgresEnvVarImageName = "TEST_POSTGRES_IMAGE_NAME"
 	// DefaultPostgresImageVersion specifies the Postgres docker image version to use in tests.
-	DefaultPostgresImageVersion = "9.6.17"
+	DefaultPostgresImageVersion = "13.2"
 	// DefaultPostgresEnvVarImageVersion is the environment variable name for default Postgres docker image version.
 	DefaultPostgresEnvVarImageVersion = "TEST_POSTGRES_IMAGE_VERSION"
 )
